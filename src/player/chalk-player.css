@@ -1,0 +1,65 @@
+/* 播放器自带的最小样式:纸面、字幕、气口提示。宿主可整体覆盖。 */
+
+.chalk-player {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.chalk-stage {
+  background: #fffdf7;
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 200px;
+}
+
+.chalk-start {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 2px solid #1e1e1e;
+  background: #fff;
+  cursor: pointer;
+  pointer-events: none; /* 点击由整个播放器接管 */
+}
+
+.chalk-caption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 3.6em;
+  padding: 10px 14px;
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.chalk-tap-hint {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1971c2;
+  animation: chalk-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes chalk-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.45);
+    opacity: 0.55;
+  }
+}
+
+.chalk-done-mark {
+  color: #2f9e44;
+  font-size: 24px;
+}

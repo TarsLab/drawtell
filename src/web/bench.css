@@ -1,0 +1,63 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, 'PingFang SC', sans-serif;
+  background: #efe9dd;
+  color: #1e1e1e;
+}
+
+.bench {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.bench-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.bench-bar button {
+  font-size: 15px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #999;
+  background: #fff;
+  cursor: pointer;
+}
+
+.bench-bar button.on {
+  background: #1e1e1e;
+  color: #fff;
+}
+
+.bench-meta {
+  margin-left: auto;
+  font-size: 13px;
+  color: #666;
+}
+
+.bench-problem {
+  font-size: 18px;
+  line-height: 1.6;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.chalk-player {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: #fffdf7;
+}
+
+.bench-hint {
+  font-size: 13px;
+  color: #888;
+}
