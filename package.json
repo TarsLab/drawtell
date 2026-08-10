@@ -1,0 +1,33 @@
+{
+  "name": "drawtell",
+  "version": "0.0.1",
+  "description": "draw & tell — turn problems into stroke-by-stroke chalkboard explanations, from your terminal. Placeholder release.",
+  "type": "module",
+  "bin": {
+    "drawtell": "bin/drawtell.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "chalkboard",
+    "animation",
+    "education",
+    "excalidraw",
+    "cli",
+    "agent-friendly"
+  ],
+  "author": "tarslab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tarslab/drawtell.git"
+  },
+  "homepage": "https://github.com/tarslab/drawtell#readme",
+  "bugs": {
+    "url": "https://github.com/tarslab/drawtell/issues"
+  }
+}
