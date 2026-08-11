@@ -16,6 +16,6 @@
     "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src", "scenes", "vite.config.ts"],
+  "include": ["src", "scenes"],
   "exclude": ["src/cli"]
 }

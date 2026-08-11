@@ -15,11 +15,13 @@ export interface ChalkPlayerProps {
   scene: ChalkScene;
   /** 画完一步是否允许点击跳过正在画的笔(打磨台用;孩子端默认关) */
   allowSkip?: boolean;
+  /** 装载后直接定格在第 n 步画完处(1 起;0 = 空板),snap 截图用 */
+  seekStep?: number;
   pointerImg?: string;
   onPhaseChange?: (phase: ChalkPhase, stepIndex: number) => void;
 }
 
-export function ChalkPlayer({ scene, allowSkip, pointerImg, onPhaseChange }: ChalkPlayerProps) {
+export function ChalkPlayer({ scene, allowSkip, seekStep, pointerImg, onPhaseChange }: ChalkPlayerProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const windowsRef = useRef<StepWindow[]>([]);
@@ -57,13 +59,20 @@ export function ChalkPlayer({ scene, allowSkip, pointerImg, onPhaseChange }: Cha
       svg.style.height = 'auto';
       stageRef.current.replaceChildren(svg);
       svgRef.current = svg;
-      transition('ready', 0);
+      if (seekStep != null && seekStep > 0) {
+        // 定格:SMIL 暂停态下 setCurrentTime 同步渲染到该时刻
+        const idx = Math.min(seekStep, scene.steps.length) - 1;
+        svg.setCurrentTime(windowsRef.current[idx].endMs / 1000);
+        transition(idx >= scene.steps.length - 1 ? 'done' : 'gap', idx);
+      } else {
+        transition('ready', 0);
+      }
     });
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafRef.current);
     };
-  }, [scene, pointerImg, transition]);
+  }, [scene, pointerImg, seekStep, transition]);
 
   // 画一步:unpause,rAF 盯到步尾即精确停在边界
   const drawStep = useCallback(
@@ -122,7 +131,7 @@ export function ChalkPlayer({ scene, allowSkip, pointerImg, onPhaseChange }: Cha
   return (
     <div className="chalk-player" onPointerDown={handleTap}>
       <div className="chalk-stage" ref={stageRef} />
-      {phase === 'ready' && (
+      {phase === 'ready' && seekStep == null && (
         <button className="chalk-start" type="button">
           ▶ 开始画
         </button>
