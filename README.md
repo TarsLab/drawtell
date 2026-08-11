@@ -45,6 +45,12 @@ build); `src/schema/` — the scene contract (zod) and lesson-bundle contract; `
 seed scenes (authored in TS, the source format; lesson bundles in JSON are the build
 artifact).
 
+## Filesystem
+
+All state lives on the filesystem — plain files you can `ls`, `git`, and `rm`. Sources
+(`scenes/*.ts`) and human decisions (`bundles/*/review.json`, planned) are precious;
+everything else is derived and regenerable. Layout and state model: [docs/文件系统.md](docs/文件系统.md).
+
 ## Design principles
 
 Built agent-first: text in, text out; `--json` on every command; semantic exit
