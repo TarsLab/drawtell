@@ -6,6 +6,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, readdir, stat } from 'node:fs/promises';
+import type { AddressInfo } from 'node:net';
 import { networkInterfaces } from 'node:os';
 import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,7 +70,13 @@ async function sendFile(res: ServerResponse, root: string, pathname: string): Pr
   }
 }
 
-export function serve({ port, bundlesDir, json }: ServeOptions): Promise<never> {
+export interface StartOptions {
+  /** 0 = 随机空闲端口(snap 的临时实例) */
+  port: number;
+  bundlesDir: string;
+}
+
+export async function startServer({ port, bundlesDir }: StartOptions): Promise<{ port: number; close: () => Promise<void> }> {
   const bundlesRoot = resolve(bundlesDir);
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -86,21 +93,30 @@ export function serve({ port, bundlesDir, json }: ServeOptions): Promise<never> 
     }
   });
 
-  return new Promise<never>((_, reject) => {
-    server.on('error', reject);
-    server.listen(port, '0.0.0.0', () => {
-      const lan = Object.values(networkInterfaces())
-        .flat()
-        .filter((i) => i && i.family === 'IPv4' && !i.internal)
-        .map((i) => i!.address);
-      if (json) {
-        console.log(JSON.stringify({ listening: true, port, urls: [`http://localhost:${port}/`, ...lan.map((a) => `http://${a}:${port}/`)], bundles: bundlesRoot }));
-      } else {
-        console.log(`drawtell serve — 播放器 http://localhost:${port}/`);
-        console.log(`  课包目录 ${bundlesRoot}(URL:/bundles/<id>/,清单:/api/bundles)`);
-        for (const a of lan) console.log(`  局域网  http://${a}:${port}/(iPad 用这个)`);
-        console.log('  Ctrl+C 停止');
-      }
-    });
+  await new Promise<void>((res, rej) => {
+    server.on('error', rej);
+    server.listen(port, '0.0.0.0', () => res());
   });
+  return {
+    port: (server.address() as AddressInfo).port,
+    close: () => new Promise((res) => server.close(() => res())),
+  };
+}
+
+export async function serve({ port, bundlesDir, json }: ServeOptions): Promise<never> {
+  const { port: actual } = await startServer({ port, bundlesDir });
+  const bundlesRoot = resolve(bundlesDir);
+  const lan = Object.values(networkInterfaces())
+    .flat()
+    .filter((i) => i && i.family === 'IPv4' && !i.internal)
+    .map((i) => i!.address);
+  if (json) {
+    console.log(JSON.stringify({ listening: true, port: actual, urls: [`http://localhost:${actual}/`, ...lan.map((a) => `http://${a}:${actual}/`)], bundles: bundlesRoot }));
+  } else {
+    console.log(`drawtell serve — 播放器 http://localhost:${actual}/`);
+    console.log(`  课包目录 ${bundlesRoot}(URL:/bundles/<id>/,清单:/api/bundles)`);
+    for (const a of lan) console.log(`  局域网  http://${a}:${actual}/(iPad 用这个)`);
+    console.log('  Ctrl+C 停止');
+  }
+  return new Promise<never>(() => {});
 }

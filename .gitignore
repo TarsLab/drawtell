@@ -2,6 +2,7 @@ node_modules/
 dist/
 public/fonts/
 bundles/
+snaps/
 *.log
 .DS_Store
 *.tgz

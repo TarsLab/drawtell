@@ -13,13 +13,15 @@ drawtell(边画边讲):把题目变成逐笔画出、带讲解节奏的黑板动
 drawtell check <scene.ts> [--json]              # schema + stroke-order + layout checks, errors as fix guides
 drawtell build <scene.ts> [--out <dir>]         # scene → lesson bundle (scene.json + manifest.json), idempotent
 drawtell serve [--port <n>] [--bundles <dir>]   # web player + bundle list (/api/bundles) + LAN distribution
+drawtell snap <scene.ts|bundle-id> [--step <n>] # keyframe screenshots + index.json (image ↔ narration pairs)
 ```
 
-Player page params (the contract `snap` will drive): `?scene=<id>` load a bundle ·
-`&step=<n>` freeze at the end of step n (0 = blank board) · `&bare=1` chrome-less stage.
-The page sets `body[data-drawtell-ready="1"]` once rendered and seeked.
+Player page params (what `snap` drives): `?scene=<id>` load a bundle · `&step=<n>` freeze at
+the end of step n (0 = blank board) · `&bare=1` chrome-less stage. The page sets
+`body[data-drawtell-ready="1"]` once rendered and seeked. `snap` needs playwright
+(devDependency; `npx playwright install chromium` once) and built web assets (`pnpm build`).
 
-Planned: `snap` (keyframe screenshots) · `ls`
+Planned: `ls`
 
 Exit codes: `0` pass · `1` scene has problems (findings carry fix guidance) · `2` usage error ·
 `3` planned-but-unimplemented · `4` internal error. Every command takes `--json`.
