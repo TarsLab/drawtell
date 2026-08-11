@@ -11,11 +11,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChalkPlayer } from '../player';
 import type { ChalkPhase, ChalkScene } from '../player';
+import { bimoduo } from '../../scenes/bimoduo';
 import { dengche } from '../../scenes/dengche';
 import { zuqiu } from '../../scenes/zuqiu';
 import { loadBundle } from './load-bundle';
 
-const BUILTIN: ChalkScene[] = [dengche, zuqiu];
+const BUILTIN: ChalkScene[] = [dengche, zuqiu, bimoduo];
 
 interface Query {
   sceneId: string | null;
