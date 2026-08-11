@@ -12,18 +12,19 @@ const CROSS = '#e8590c';
 /** 小人:头 + 身 + 两腿 + 名字,5 个元素 */
 function person(prefix: string, x: number, name: string): ChalkSkeleton[] {
   return [
-    { type: 'ellipse', id: `${prefix}-head-animateDuration:350`, x, y: 64, width: 26, height: 26, strokeColor: INK },
-    { type: 'line', id: `${prefix}-body-animateDuration:250`, x: x + 13, y: 90, points: [[0, 0], [0, 32]], strokeColor: INK },
-    { type: 'line', id: `${prefix}-legl-animateDuration:200`, x: x + 13, y: 122, points: [[0, 0], [-10, 18]], strokeColor: INK },
-    { type: 'line', id: `${prefix}-legr-animateDuration:200`, x: x + 13, y: 122, points: [[0, 0], [10, 18]], strokeColor: INK },
-    { type: 'text', id: `${prefix}-name-animateDuration:450`, x: x - 6, y: 146, text: name, fontSize: 18, strokeColor: INK },
+    { type: 'ellipse', id: `${prefix}-head`, animateDuration: 350, x, y: 64, width: 26, height: 26, strokeColor: INK },
+    { type: 'line', id: `${prefix}-body`, animateDuration: 250, x: x + 13, y: 90, points: [[0, 0], [0, 32]], strokeColor: INK },
+    { type: 'line', id: `${prefix}-legl`, animateDuration: 200, x: x + 13, y: 122, points: [[0, 0], [-10, 18]], strokeColor: INK },
+    { type: 'line', id: `${prefix}-legr`, animateDuration: 200, x: x + 13, y: 122, points: [[0, 0], [10, 18]], strokeColor: INK },
+    { type: 'text', id: `${prefix}-name`, animateDuration: 450, x: x - 6, y: 146, text: name, fontSize: 18, strokeColor: INK },
   ];
 }
 
 function balls(prefix: string, from: number, count: number, x0: number, gap: number, y: number, size: number): ChalkSkeleton[] {
   return Array.from({ length: count }, (_, k) => ({
     type: 'ellipse',
-    id: `${prefix}-${from + k}-animateDuration:240`,
+    id: `${prefix}-${from + k}`,
+    animateDuration: 240,
     x: x0 + (from + k - 1) * gap,
     y,
     width: size,
@@ -37,12 +38,12 @@ const ids = (els: ChalkSkeleton[]) => els.map((e) => e.id);
 // 步 1:小明 + 足球一行 9 个
 const s1 = [
   ...person('xm', 74, '小明'),
-  { type: 'text', id: 'rowfb-animateDuration:450', x: 160, y: 82, text: '足球', fontSize: 18, strokeColor: INK } as ChalkSkeleton,
+  { type: 'text', id: 'rowfb', animateDuration: 450, x: 160, y: 82, text: '足球', fontSize: 18, strokeColor: INK } as ChalkSkeleton,
   ...balls('fb', 1, 9, 160, 48, 112, 34),
 ];
 // 步 2:篮球另起一行 8 个(分行 = 隔离干扰项)
 const s2 = [
-  { type: 'text', id: 'rowbb-animateDuration:450', x: 160, y: 194, text: '篮球', fontSize: 18, strokeColor: INK } as ChalkSkeleton,
+  { type: 'text', id: 'rowbb', animateDuration: 450, x: 160, y: 194, text: '篮球', fontSize: 18, strokeColor: INK } as ChalkSkeleton,
   ...balls('bb', 1, 8, 160, 40, 224, 30),
 ];
 // 步 3:小红 + 划掉 5 个足球 + 箭头指向小红
@@ -50,23 +51,24 @@ const s3 = [
   ...person('xh', 652, '小红'),
   ...Array.from({ length: 5 }, (_, k): ChalkSkeleton => ({
     type: 'line',
-    id: `cross-${k + 1}-animateDuration:220`,
+    id: `cross-${k + 1}`,
+    animateDuration: 220,
     x: 349 + k * 48,
     y: 109,
     points: [[0, 0], [40, 40]],
     strokeColor: CROSS,
   })),
-  { type: 'arrow', id: 'give-animateDuration:600', x: 582, y: 120, points: [[0, 0], [62, -20]], strokeColor: CROSS } as ChalkSkeleton,
+  { type: 'arrow', id: 'give', animateDuration: 600, x: 582, y: 120, points: [[0, 0], [62, -20]], strokeColor: CROSS } as ChalkSkeleton,
 ];
 // 步 4:小红回送 6 个篮球,添画进篮球行
 const s4 = [
   ...balls('bb', 9, 6, 160, 40, 224, 30),
-  { type: 'arrow', id: 'back-animateDuration:600', x: 674, y: 152, points: [[0, 0], [26, 62]], strokeColor: INK } as ChalkSkeleton,
+  { type: 'arrow', id: 'back', animateDuration: 600, x: 674, y: 152, points: [[0, 0], [26, 62]], strokeColor: INK } as ChalkSkeleton,
 ];
 // 步 5:圈出没划掉的足球,数出 4 个
 const s5: ChalkSkeleton[] = [
-  { type: 'ellipse', id: 'ringleft-animateDuration:900', x: 148, y: 100, width: 200, height: 58, strokeColor: MARK },
-  { type: 'text', id: 'ans4-animateDuration:800', x: 200, y: 282, text: '小明还有 4 个足球', fontSize: 24, strokeColor: MARK },
+  { type: 'ellipse', id: 'ringleft', animateDuration: 900, x: 148, y: 100, width: 200, height: 58, strokeColor: MARK },
+  { type: 'text', id: 'ans4', animateDuration: 800, x: 200, y: 282, text: '小明还有 4 个足球', fontSize: 24, strokeColor: MARK },
 ];
 
 const steps: ChalkStep[] = [

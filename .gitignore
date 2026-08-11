@@ -1,6 +1,7 @@
 node_modules/
 dist/
 public/fonts/
+bundles/
 *.log
 .DS_Store
 *.tgz
