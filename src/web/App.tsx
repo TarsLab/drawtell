@@ -2,7 +2,7 @@
  * 打磨台 + serve 播放页。大人自用,过"可以给孩子看"再进课包流程。
  *
  * 无参:内置种子场景打磨台(pnpm dev)。
- * ?scene=<id>:从 /bundles/<id>/ 加载课包(drawtell serve;dev 有等价中间件)。
+ * ?scene=<id>:从 /bundles/<id>/ 加载课包(drawtell serve;dev 有等价中间件)。&cursor=0 不画笔尖。
  * &step=<n>:定格在第 n 步画完处(0 = 空板),snap 截图用;
  *            渲染就绪后置 body[data-drawtell-ready="1"] 供 playwright 等待。
  * &bare=1:隐藏台架工具条与提示,只留画面和讲稿。
@@ -22,12 +22,14 @@ interface Query {
   sceneId: string | null;
   step: number | null;
   bare: boolean;
+  /** &cursor=0 不画笔尖(snap --no-cursor) */
+  cursor: boolean;
 }
 
 function readQuery(): Query {
   const p = new URLSearchParams(window.location.search);
   const step = p.get('step');
-  return { sceneId: p.get('scene'), step: step === null ? null : Number(step), bare: p.get('bare') === '1' };
+  return { sceneId: p.get('scene'), step: step === null ? null : Number(step), bare: p.get('bare') === '1', cursor: p.get('cursor') !== '0' };
 }
 
 export function App() {
@@ -102,6 +104,8 @@ export function App() {
         scene={scene}
         allowSkip
         seekStep={q.step ?? undefined}
+        pointer={q.cursor}
+        audioBaseUrl={q.sceneId ? `/bundles/${encodeURIComponent(q.sceneId)}/` : undefined}
         onPhaseChange={onPhaseChange}
       />
       {!q.bare && <p className="bench-hint">点画面:开始 / 气口继续 / 画到一半点一下 = 快进本步(打磨台专属)</p>}

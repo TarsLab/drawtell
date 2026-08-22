@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * 薄壳:实现在 src/cli/main.ts,靠 Node ≥22.18 原生 type stripping 直跑 TS。
- * 发布 npm 前必须先把 CLI 打包成 JS(node_modules 内不做 type stripping),
- * package.json 的 prepublishOnly 设了闸。
+ * 薄壳:仓库内直跑 src/cli/main.ts(Node ≥22.18 原生 type stripping,零构建迭代);
+ * npm 包不含 src,回退到 dist/cli/main.js(tsc 产物,prepublishOnly 保证已构建)。
  */
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const src = new URL('../src/cli/main.ts', import.meta.url);
+const entry = existsSync(fileURLToPath(src)) ? src : new URL('../dist/cli/main.js', import.meta.url);
 try {
-  const { main } = await import(new URL('../src/cli/main.ts', import.meta.url).href);
+  const { main } = await import(entry.href);
   await main(process.argv.slice(2));
 } catch (err) {
   console.error(`drawtell: 内部错误:${err?.stack ?? err}`);

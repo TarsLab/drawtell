@@ -30,6 +30,7 @@ export interface ServeOptions {
   port: number;
   bundlesDir: string;
   json: boolean;
+  title?: string;
 }
 
 /** 目录清单:serve 首页与将来 ls 共用的数据源 */
@@ -74,14 +75,20 @@ export interface StartOptions {
   /** 0 = 随机空闲端口(snap 的临时实例) */
   port: number;
   bundlesDir: string;
+  /** 孩子端界面标题(工作区 drawtell.json 的 title),/api/config 转出;缺省 drawtell */
+  title?: string;
 }
 
-export async function startServer({ port, bundlesDir }: StartOptions): Promise<{ port: number; close: () => Promise<void> }> {
+export async function startServer({ port, bundlesDir, title = 'drawtell' }: StartOptions): Promise<{ port: number; close: () => Promise<void> }> {
   const bundlesRoot = resolve(bundlesDir);
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
-    if (pathname === '/api/bundles') {
+    if (pathname === '/api/config') {
+      // 孩子端没有品牌:标题是家长在工作区 drawtell.json 里的配置
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ title }));
+    } else if (pathname === '/api/bundles') {
       void listBundles(bundlesRoot).then((list) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(list, null, 2));
@@ -103,8 +110,8 @@ export async function startServer({ port, bundlesDir }: StartOptions): Promise<{
   };
 }
 
-export async function serve({ port, bundlesDir, json }: ServeOptions): Promise<never> {
-  const { port: actual } = await startServer({ port, bundlesDir });
+export async function serve({ port, bundlesDir, json, title }: ServeOptions): Promise<never> {
+  const { port: actual } = await startServer({ port, bundlesDir, title });
   const bundlesRoot = resolve(bundlesDir);
   const lan = Object.values(networkInterfaces())
     .flat()
