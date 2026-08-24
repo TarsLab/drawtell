@@ -27,6 +27,8 @@ export async function loadBundle(id: string): Promise<ChalkScene> {
     template: sceneJson.template,
     skeletons: sceneJson.skeletons,
     steps: manifest.steps,
+    ...(manifest.blocks != null ? { blocks: manifest.blocks } : {}),
+    ...(manifest.subscenes != null ? { subscenes: manifest.subscenes } : {}),
   };
   const parsed = sceneSchema.safeParse(raw);
   if (!parsed.success) {
