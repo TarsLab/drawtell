@@ -15,6 +15,7 @@ export const dengche: ChalkScene = {
   problem: '汽车每 15 分钟一班,哥哥想乘 9:10 的班车,到车站时已经 9:20,他要等几分钟?',
   model: '时间数轴',
   template: 'paper-strict',
+  subject: '数学',
   skeletons: [
     // 步 1:时间轴 + 9:10
     { type: 'arrow', id: 'axis', animateDuration: 1400, x: 60, y: 240, points: [[0, 0], [640, 0]], strokeColor: INK },

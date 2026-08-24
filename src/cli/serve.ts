@@ -49,7 +49,7 @@ async function listBundles(root: string): Promise<Array<Record<string, unknown>>
     try {
       const scene = JSON.parse(await readFile(join(root, id, 'scene.json'), 'utf8')) as Record<string, unknown>;
       const manifest = JSON.parse(await readFile(join(root, id, 'manifest.json'), 'utf8')) as { steps?: unknown[] };
-      out.push({ id: scene.id, title: scene.title, model: scene.model, template: scene.template, steps: manifest.steps?.length ?? 0 });
+      out.push({ id: scene.id, title: scene.title, model: scene.model, template: scene.template, subject: scene.subject, steps: manifest.steps?.length ?? 0 });
     } catch {
       // 不是课包目录,跳过
     }

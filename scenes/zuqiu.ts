@@ -85,6 +85,7 @@ export const zuqiu: ChalkScene = {
   problem: '小明买了 9 个足球、8 个篮球,送给小红 5 个足球,小红送给他 6 个篮球。小明现在有几个足球?',
   model: '实物图',
   template: 'paper-strict',
+  subject: '数学',
   skeletons: [...s1, ...s2, ...s3, ...s4, ...s5],
   steps,
 };

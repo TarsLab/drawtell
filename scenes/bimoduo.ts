@@ -62,6 +62,7 @@ export const bimoduo: ChalkScene = {
   problem: '小华有 7 支铅笔,小丽有 4 支铅笔,小华比小丽多几支?',
   model: '实物图',
   template: 'paper-strict',
+  subject: '数学',
   skeletons: [...s1, ...s2, ...s3, ...s4],
   steps: [
     { step: 1, elementIds: ids(s1), line: '小华有 7 支铅笔。画出来,一边画一边数:1、2……7。', pauseAfter: true },
