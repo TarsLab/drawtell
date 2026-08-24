@@ -1,10 +1,11 @@
 /**
  * drawtell serve:一个进程覆盖两个场景——打磨预览与局域网分发(iPad 取课包)。
- * 静态资源 = 构建产物 dist/web(随 drawtell 检出目录走);课包 = 运行目录的 bundles/。
+ * 静态资源 = 构建产物 dist/web(随 drawtell 检出目录走);课包 = 工作区 paths.bundles(--bundles 覆盖)。
  * 零依赖,node:http;不做缓存与压缩(家庭局域网,简单可靠优先)。
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { redactDeep } from './workspace.ts';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces } from 'node:os';
@@ -31,9 +32,11 @@ export interface ServeOptions {
   bundlesDir: string;
   json: boolean;
   title?: string;
+  /** --json 里一并回报的工作区信息(workspaceReport),由 main 传入 */
+  report?: Record<string, string>;
 }
 
-/** 目录清单:serve 首页与将来 ls 共用的数据源 */
+/** 课包清单:/api/bundles 的数据源(ls 自己读 manifest,不经这里) */
 async function listBundles(root: string): Promise<Array<Record<string, unknown>>> {
   let entries: string[];
   try {
@@ -110,7 +113,7 @@ export async function startServer({ port, bundlesDir, title = 'drawtell' }: Star
   };
 }
 
-export async function serve({ port, bundlesDir, json, title }: ServeOptions): Promise<never> {
+export async function serve({ port, bundlesDir, json, title, report }: ServeOptions): Promise<never> {
   const { port: actual } = await startServer({ port, bundlesDir, title });
   const bundlesRoot = resolve(bundlesDir);
   const lan = Object.values(networkInterfaces())
@@ -118,7 +121,7 @@ export async function serve({ port, bundlesDir, json, title }: ServeOptions): Pr
     .filter((i) => i && i.family === 'IPv4' && !i.internal)
     .map((i) => i!.address);
   if (json) {
-    console.log(JSON.stringify({ listening: true, port: actual, urls: [`http://localhost:${actual}/`, ...lan.map((a) => `http://${a}:${actual}/`)], bundles: bundlesRoot }));
+    console.log(JSON.stringify(redactDeep({ listening: true, port: actual, urls: [`http://localhost:${actual}/`, ...lan.map((a) => `http://${a}:${actual}/`)], bundles: bundlesRoot, title, ...(report ?? {}) })));
   } else {
     console.log(`drawtell serve — 播放器 http://localhost:${actual}/`);
     console.log(`  课包目录 ${bundlesRoot}(URL:/bundles/<id>/,清单:/api/bundles)`);

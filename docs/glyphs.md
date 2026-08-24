@@ -22,14 +22,14 @@ y =  0   base     基线
 y = +1   bottom   降部底 g j p q y
 ```
 
-大写取 `CAP = ASC = 2`(顶第一线)。Excalifont 实测的 cap height 只有 1.653——
+大写取 `CAP = ASC = -2`(y 向上为负;顶第一线)。Excalifont 实测的 cap height 只有 1.653——
 排版惯例里大写本就低于升部;但四线三格的教学惯例是大写顶第一线,孩子照着写才有参照,
 而字形包是示范字。代价是与字体混排时大写偏大约 21%。要换成排版惯例,
 把 `metrics.ts` 的 `CAP` 改成 `-1.65`,字形按比例自适应,不必逐字重画。
 
 消费方给 `xHeight`(px)与基线左端坐标,其余按比例算。这套刻度与练习纸上的
 四线三格严格对应,所以演示画面和孩子手边的格子是同一套参照;也因此,
-`LOWERCASE` 的归一化数据可以直接拿去跟孩子的手写笔迹比对,不只是用来画。
+`GLYPHS` 的归一化数据可以直接拿去跟孩子的手写笔迹比对,不只是用来画。
 
 ## 与 Excalifont 对齐
 
@@ -80,7 +80,7 @@ const strokes = wordSkeletons('ram', { xHeight: 120, x: 80, y: 300 });
 const { svg } = await buildAnimatedSvg(strokes);   // 一笔一个元素,数组顺序即笔顺
 ```
 
-`wordAdvance(word, { xHeight })` 给排版宽度;`LOWERCASE` 给归一化字形数据(比对用);
+`wordAdvance(word, { xHeight })` 给排版宽度;`GLYPHS`(a–z 与 A–Z 的查找入口;`LOWERCASE` / `UPPERCASE` 是它的两半)给归一化字形数据(比对用);
 `GUIDES` 给四线三格线位(画格子用)。空格只让光标前进 `SPACE_ADVANCE`、不落笔,
 所以 `'ram man'` 能一次画完,不必调用方自己拆词。其余收录之外的字符抛
 `UnknownGlyphError`,不猜。

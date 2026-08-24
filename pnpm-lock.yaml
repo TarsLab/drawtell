@@ -11,6 +11,9 @@ importers:
       excalidraw-animate:
         specifier: 0.7.2
         version: 0.7.2(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -36,9 +39,6 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
-      typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
       vite:
         specifier: ^8.2.1
         version: 8.2.1(@types/node@26.2.0)

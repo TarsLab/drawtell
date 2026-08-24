@@ -79,6 +79,16 @@ export function redactHome(value: string): string {
   return home && value.startsWith(home) ? '$HOME' + value.slice(home.length) : value;
 }
 
+/** 递归脱敏:--json 的整个对象过一遍,嵌套字段里的绝对路径(shots[].file、jobsFile、logFile…)也不漏。 */
+export function redactDeep<T>(value: T): T {
+  if (typeof value === 'string') return redactHome(value) as T;
+  if (Array.isArray(value)) return value.map(redactDeep) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, redactDeep(v)])) as T;
+  }
+  return value;
+}
+
 async function readJson<T>(file: string): Promise<T | null> {
   try {
     return JSON.parse(await readFile(file, 'utf8')) as T;
@@ -112,7 +122,7 @@ export async function loadWorkspace(cwd = process.cwd()): Promise<Workspace> {
     source,
     paths: Object.fromEntries(
       (Object.keys(ROLE_DEFAULTS) as (keyof WorkspacePaths)[]).map((k) => [k, expandPath(raw?.paths?.[k] ?? ROLE_DEFAULTS[k], root)]),
-    ) as WorkspacePaths,
+    ) as unknown as WorkspacePaths,
     dub: raw?.dub ?? {},
     title: raw?.title ?? 'drawtell',
   };
@@ -126,5 +136,9 @@ export function workspaceReport(ws: Workspace): Record<string, string> {
     bundlesDir: redactHome(ws.paths.bundles),
     snapsDir: redactHome(ws.paths.snaps),
     reviewsDir: redactHome(ws.paths.reviews),
+    photosDir: redactHome(ws.paths.photos),
+    ledgerDir: redactHome(ws.paths.ledger),
+    notesDir: redactHome(ws.paths.notes),
+    kidsDir: redactHome(ws.paths.kids),
   };
 }
