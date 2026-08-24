@@ -63,3 +63,33 @@
   color: #2f9e44;
   font-size: 24px;
 }
+
+/* transport 控制条(controls 属性开启):音乐播放器式 上一段/暂停继续/下一段 */
+.chalk-transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 10px;
+}
+
+.chalk-transport button {
+  font-size: 18px;
+  line-height: 1;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #1e1e1e;
+  background: #fff;
+  cursor: pointer;
+}
+
+.chalk-transport button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chalk-transport-pos {
+  margin-left: 6px;
+  font-size: 15px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
