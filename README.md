@@ -48,12 +48,19 @@ beyond that the line is too long or the step draws too little, fix the explanati
 `drawtell.json` also carries `title` (the kid-facing UI title, default `drawtell` — the kid-facing UI has no
 brand of its own; the name is the family's setting; `serve` exposes it as `GET /api/config` and its bundle list page
 and the application-layer pages read it) and `paths` (where derived `bundles` / `snaps` go, plus
-parent-facing directory **roles** `reviews` / `photos` / `ledger` / `notes` / `kids`, default = same-name English
-directories; contracts and skills only ever name the role, a family maps it to any directory name — see
+parent-facing directory **roles** `reviews` / `photos` / `ledger` / `notes` / `kids` / `inbox`, default = same-name
+English directories; contracts and skills only ever name the role, a family maps it to any directory name — see
 `docs/文件系统.md`).
 
+The workspace is resolved in priority order: global `--workspace <dir>` (explicit, the directory must
+exist; `~` works) > a `drawtell.json` in the cwd > the `workspace` in `~/.config/drawtell/config.json` >
+the cwd itself. `--workspace` decides the workspace and where `paths` land; scene-file arguments and
+`--out` / `--bundles` relative paths still resolve against the cwd. Every `--json` reports which
+workspace was used and how (`workspaceSource`: `flag` / `cwd` / `user-config` / `default`).
+
 Exit codes: `0` pass · `1` scene has problems (findings carry fix guidance) · `2` usage error ·
-`3` planned-but-unimplemented (reserved; no command returns it today) · `4` internal error. Every command takes `--json`.
+`3` planned-but-unimplemented (reserved; no command returns it today) · `4` internal error. Every command
+takes the global flags `--json` and `--workspace <dir>`.
 
 ## Glyphs
 

@@ -8,14 +8,19 @@
  *     同一段还定义家长面目录的**角色**(reviews / photos / ledger / notes / kids):契约里只写角色名,
  *     缺省同名英文目录,家长可映射成任何名字(如中文)。CLI 只读 reviews,其余解析出来给 skills / 应用层。
  *     `title` 是孩子端界面标题(缺省 drawtell):孩子端没有品牌,名字是家长的配置。
- *  2. cwd 没有 drawtell.json 时,回落到 ~/.config/drawtell/config.json 的 workspace。
- *     默认值有了,但不丢"无隐藏状态"——每个 --json 都回报解析到了哪个工作区、从哪来的。
+ *  2. 全局 `--workspace <dir>` 显式指定工作区(main 剥离后传进来),优先级最高;
+ *     其次 cwd 有 drawtell.json,再回落到 ~/.config/drawtell/config.json 的 workspace,
+ *     都没有就把 cwd 当工作区。默认值有了,但不丢"无隐藏状态"——每个 --json 都回报
+ *     解析到了哪个工作区、从哪来的(workspaceSource:flag / cwd / user-config / default)。
  *  3. $HOME 脱敏:--json 的输出会被 agent 带进上下文,不该带出用户名。
  */
 
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
+
+/** 用法错误:main 捕获后 exit 2,错误信息即修复指南。 */
+export class UsageError extends Error {}
 
 export interface WorkspacePaths {
   /** 课包目录(派生,build 可重来) */
@@ -29,6 +34,8 @@ export interface WorkspacePaths {
   ledger: string;
   notes: string;
   kids: string;
+  /** 收件箱(作业照片进件,homework skills 读) */
+  inbox: string;
 }
 
 const ROLE_DEFAULTS: Record<keyof WorkspacePaths, string> = {
@@ -39,6 +46,7 @@ const ROLE_DEFAULTS: Record<keyof WorkspacePaths, string> = {
   ledger: 'ledger',
   notes: 'notes',
   kids: 'kids',
+  inbox: 'inbox',
 };
 
 export interface DubPolicy {
@@ -56,8 +64,8 @@ interface RawConfig {
 export interface Workspace {
   /** 工作区根(绝对路径) */
   root: string;
-  /** 怎么定下来的——cwd 有 drawtell.json / 用户配置回落 / 什么都没有就是 cwd */
-  source: 'cwd' | 'user-config' | 'default';
+  /** 怎么定下来的——--workspace 显式指定 / cwd 有 drawtell.json / 用户配置回落 / 什么都没有就是 cwd */
+  source: 'flag' | 'cwd' | 'user-config' | 'default';
   paths: WorkspacePaths;
   dub: DubPolicy;
   /** 孩子端界面标题(书架 / 播放页),缺省 drawtell */
@@ -98,14 +106,31 @@ async function readJson<T>(file: string): Promise<T | null> {
 }
 
 /**
- * 解析工作区。顺序:cwd 有 drawtell.json → 用它;否则看用户配置的 workspace;
- * 都没有就把 cwd 当工作区(现有行为,不破坏任何已有工作区)。
+ * 解析工作区。优先级:`--workspace <dir>`(override,跳过一切回落)→ cwd 有 drawtell.json → 用它;
+ * 否则看用户配置的 workspace;都没有就把 cwd 当工作区(现有行为,不破坏任何已有工作区)。
+ * override 的目录必须存在(否则 UsageError,信息即修复指南);目录里没有 drawtell.json
+ * 就用缺省 paths——与 cwd 分支同一行为。
  */
-export async function loadWorkspace(cwd = process.cwd()): Promise<Workspace> {
-  let root = resolve(cwd);
+export async function loadWorkspace(override?: string): Promise<Workspace> {
+  let root = resolve(process.cwd());
   let source: Workspace['source'] = 'default';
-  let raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
+  let raw: RawConfig | null;
 
+  if (override !== undefined) {
+    root = expandPath(override, root);
+    const st = await stat(root).catch(() => null);
+    if (!st?.isDirectory()) {
+      throw new UsageError(
+        `--workspace 指向的目录不存在:${redactHome(root)}(由 '${redactHome(override)}' 解析)。` +
+          '先 mkdir -p 创建它,或改指向已有的内容工作区根;目录里有没有 drawtell.json 都行,没有就用缺省 paths。',
+      );
+    }
+    raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
+    source = 'flag';
+    return assemble(root, source, raw);
+  }
+
+  raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
   if (raw) {
     source = 'cwd';
   } else {
@@ -116,7 +141,10 @@ export async function loadWorkspace(cwd = process.cwd()): Promise<Workspace> {
       source = 'user-config';
     }
   }
+  return assemble(root, source, raw);
+}
 
+function assemble(root: string, source: Workspace['source'], raw: RawConfig | null): Workspace {
   return {
     root,
     source,
@@ -140,5 +168,6 @@ export function workspaceReport(ws: Workspace): Record<string, string> {
     ledgerDir: redactHome(ws.paths.ledger),
     notesDir: redactHome(ws.paths.notes),
     kidsDir: redactHome(ws.paths.kids),
+    inboxDir: redactHome(ws.paths.inbox),
   };
 }
