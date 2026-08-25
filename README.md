@@ -15,6 +15,7 @@ drawtell build <scene.ts> [--out <dir>]         # scene → lesson bundle (scene
 drawtell serve [--port <n>] [--bundles <dir>]   # / = bundle list page (iPad entry) · ?scene=<id> player · /bundles/<id>/ + /api/bundles for LAN distribution
 drawtell snap <scene.ts|bundle-id> [--step <n>] [--no-cursor] [--out <dir>] [--bundles <dir>]   # keyframe screenshots + index.json
 drawtell dub <scene.ts|bundle-id> [--voice <v>] [--instruction <s>] [--model <m>] [--dry-run] [--force] [--voxtell <bin>]   # narration audio via voxtell (voice from drawtell.json if omitted)
+drawtell note <scene.ts|bundle-id>                # lesson archive block → stdout (title + problem + final-frame wikilink + per-step narration; `markdown` field under --json), final frame copied to <paths.attachments>/<id>-final.png — appending into the journal is the caller's job
 drawtell ls                                       # workspace status: source / bundle / audio / snaps / review
 drawtell tidy <dir> [--older-than <days>] [--delete]   # remove unreferenced old files (lists only by default)
 ```
@@ -48,7 +49,7 @@ beyond that the line is too long or the step draws too little, fix the explanati
 `drawtell.json` also carries `title` (the kid-facing UI title, default `drawtell` — the kid-facing UI has no
 brand of its own; the name is the family's setting; `serve` exposes it as `GET /api/config` and its bundle list page
 and the application-layer pages read it) and `paths` (where derived `bundles` / `snaps` go, plus
-parent-facing directory **roles** `reviews` / `photos` / `ledger` / `notes` / `kids` / `inbox`, default = same-name
+parent-facing directory **roles** `attachments` / `photos` / `notes` / `kids` / `inbox`, default = same-name
 English directories; contracts and skills only ever name the role, a family maps it to any directory name — see
 `docs/文件系统.md`).
 
@@ -117,7 +118,7 @@ artifact).
 ## Filesystem
 
 All state lives on the filesystem — plain files you can `ls`, `git`, and `rm`. Sources
-(`scenes/*.ts`) and human decisions (review records `<reviews>/<id>.md`, parent notes) are precious;
+(`scenes/*.ts`) and human decisions (the review ledger `reviews.json`, the parent journal, notes) are precious;
 everything else is derived and regenerable. Layout and state model: [docs/文件系统.md](docs/文件系统.md).
 
 ## Design principles

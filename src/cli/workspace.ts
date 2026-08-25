@@ -5,8 +5,8 @@
  * 这里只多做三件事:
  *  1. `paths` 段——bundles / snaps 是「派生」,可以指到 vault 外的缓存目录,
  *     这样工作区本身只留「源」与「人的决定」(四类表上半),整个可以当 Obsidian vault 用。
- *     同一段还定义家长面目录的**角色**(reviews / photos / ledger / notes / kids):契约里只写角色名,
- *     缺省同名英文目录,家长可映射成任何名字(如中文)。CLI 只读 reviews,其余解析出来给 skills / 应用层。
+ *     同一段还定义家长面目录的**角色**(attachments / photos / notes / kids / inbox):契约里只写角色名,
+ *     缺省同名英文目录,家长可映射成任何名字(如中文)。CLI 只写 attachments(note 拷终帧),其余解析出来给 skills / 应用层。
  *     `title` 是孩子端界面标题(缺省 drawtell):孩子端没有品牌,名字是家长的配置。
  *  2. 全局 `--workspace <dir>` 显式指定工作区(main 剥离后传进来),优先级最高;
  *     其次 cwd 有 drawtell.json,再回落到 ~/.config/drawtell/config.json 的 workspace,
@@ -27,11 +27,10 @@ export interface WorkspacePaths {
   bundles: string;
   /** keyframe 截图目录(廉派生,snap 可重来) */
   snaps: string;
-  /** 验收记录目录(人的决定,不可再生):<reviews>/<id>.md,ls 读它 */
-  reviews: string;
+  /** 附件目录(通常指向 vault 的图片附件夹):note 把终帧拷进来,固定名 <id>-final.png */
+  attachments: string;
   /** 以下是家长面目录角色:CLI 不读不写,只解析给 skills / 应用层(契约里一律写角色名) */
   photos: string;
-  ledger: string;
   notes: string;
   kids: string;
   /** 收件箱(作业照片进件,homework skills 读) */
@@ -41,9 +40,8 @@ export interface WorkspacePaths {
 const ROLE_DEFAULTS: Record<keyof WorkspacePaths, string> = {
   bundles: 'bundles',
   snaps: 'snaps',
-  reviews: 'reviews',
+  attachments: 'attachments',
   photos: 'photos',
-  ledger: 'ledger',
   notes: 'notes',
   kids: 'kids',
   inbox: 'inbox',
@@ -163,9 +161,8 @@ export function workspaceReport(ws: Workspace): Record<string, string> {
     workspaceSource: ws.source,
     bundlesDir: redactHome(ws.paths.bundles),
     snapsDir: redactHome(ws.paths.snaps),
-    reviewsDir: redactHome(ws.paths.reviews),
+    attachmentsDir: redactHome(ws.paths.attachments),
     photosDir: redactHome(ws.paths.photos),
-    ledgerDir: redactHome(ws.paths.ledger),
     notesDir: redactHome(ws.paths.notes),
     kidsDir: redactHome(ws.paths.kids),
     inboxDir: redactHome(ws.paths.inbox),

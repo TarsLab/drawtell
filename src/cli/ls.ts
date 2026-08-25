@@ -50,34 +50,32 @@ function freshness(target: number | null, source: number | null): Freshness {
   return 'fresh';
 }
 
-/** 课包内容 hash:build 幂等(同输入同字节),所以 manifest 的字节 hash 就是内容指纹。 */
+/** 课包内容 hash:sha256 前 16 hex(与 apps/web 验收写入方同一把尺,契约归写入方)。 */
 async function manifestHash(bundleDir: string): Promise<string | null> {
   try {
-    return createHash('sha1').update(await readFile(join(bundleDir, 'manifest.json'))).digest('hex').slice(0, 16);
+    return createHash('sha256').update(await readFile(join(bundleDir, 'manifest.json'))).digest('hex').slice(0, 16);
   } catch {
     return null;
   }
 }
 
-/** 极简 frontmatter 取值:只读 `key: value` 单行,够验收记录用。 */
-function frontmatterValue(text: string, key: string): string | null {
-  if (!text.startsWith('---\n')) return null;
-  const end = text.indexOf('\n---', 3);
-  const block = end === -1 ? text : text.slice(0, end);
-  const m = new RegExp(`^${key}:\\s*(.+)$`, 'm').exec(block);
-  return m ? m[1].trim().replace(/^["']|["']$/g, '') : null;
+/** 验收账本:工作区根 reviews.json(机器 JSON,web 验收页写;人读的验收事件在家长日记里)。 */
+type ReviewLedger = Record<string, { verdict?: string; manifestHash?: string; date?: string }>;
+
+async function readReviews(ws: Workspace): Promise<ReviewLedger> {
+  try {
+    const parsed = JSON.parse(await readFile(join(ws.root, 'reviews.json'), 'utf8')) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as ReviewLedger) : {};
+  } catch {
+    return {}; // 文件不存在 / 不是 JSON = 全部未验收
+  }
 }
 
-async function reviewState(ws: Workspace, id: string, hash: string | null): Promise<SceneRow['review']> {
-  let text: string;
-  try {
-    text = await readFile(join(ws.paths.reviews, `${id}.md`), 'utf8');
-  } catch {
-    return 'none';
-  }
-  const recorded = frontmatterValue(text, 'manifestHash');
+function reviewState(ledger: ReviewLedger, id: string, hash: string | null): SceneRow['review'] {
+  const entry = ledger[id];
+  if (!entry) return 'none';
   // 验收绑内容不绑目录:hash 对不上 = 课包改过,验收自动失效
-  return recorded && hash && recorded === hash ? 'valid' : 'stale';
+  return entry.manifestHash && hash && entry.manifestHash === hash ? 'valid' : 'stale';
 }
 
 async function audioCount(bundleDir: string): Promise<string> {
@@ -98,6 +96,7 @@ export async function listWorkspace(ws: Workspace): Promise<SceneRow[]> {
     .map((f) => basename(f, '.ts'));
   const bundleIds = await listDir(ws.paths.bundles);
   const ids = [...new Set([...sceneIds, ...bundleIds])].sort();
+  const reviews = await readReviews(ws);
 
   const rows: SceneRow[] = [];
   for (const id of ids) {
@@ -113,7 +112,7 @@ export async function listWorkspace(ws: Workspace): Promise<SceneRow[]> {
       bundle: freshness(bm, sm),
       audio: bm == null ? '—' : await audioCount(bundleDir),
       snaps: freshness(await mtime(join(ws.paths.snaps, id, 'index.json')), bm),
-      review: await reviewState(ws, id, hash),
+      review: reviewState(reviews, id, hash),
     });
   }
   return rows;

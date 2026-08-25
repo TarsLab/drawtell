@@ -35,7 +35,7 @@ try {
     join(wsA, 'drawtell.json'),
     JSON.stringify({
       title: 'A',
-      paths: { bundles: 'out/bundles', snaps: '~/cache/snaps', inbox: '收件箱' },
+      paths: { bundles: 'out/bundles', snaps: '~/cache/snaps', inbox: '收件箱', attachments: '附件' },
       dub: { voice: 'v1' },
     }),
   );
@@ -55,6 +55,7 @@ try {
   check('相对 paths 按工作区根解析', a.paths.bundles === join(wsA, 'out/bundles'), a.paths.bundles);
   check('~ paths 展开到 HOME', a.paths.snaps === join(home, 'cache/snaps'), a.paths.snaps);
   check('inbox 角色可覆盖', a.paths.inbox === join(wsA, '收件箱'), a.paths.inbox);
+  check('attachments 角色可覆盖', a.paths.attachments === join(wsA, '附件'), a.paths.attachments);
   check('dub 政策读到', a.dub.voice === 'v1', JSON.stringify(a.dub));
 
   // ---- 什么都没有 → cwd 兜底(此时还没写用户配置)----
@@ -63,6 +64,7 @@ try {
   check('无配置 → source default', d.source === 'default', d.source);
   check('default → root = cwd', d.root === empty, d.root);
   check('inbox 角色缺省 inbox/', d.paths.inbox === join(empty, 'inbox'), d.paths.inbox);
+  check('attachments 角色缺省 attachments/', d.paths.attachments === join(empty, 'attachments'), d.paths.attachments);
 
   // ---- 用户配置回落 ----
   mkdirSync(join(home, '.config', 'drawtell'), { recursive: true });
@@ -103,6 +105,8 @@ try {
   const r = workspaceReport(oa);
   check('report 带 workspaceSource', r.workspaceSource === 'flag', r.workspaceSource);
   check('report 带 inboxDir(脱敏)', r.inboxDir === '$HOME/wsA/收件箱', r.inboxDir);
+  check('report 带 attachmentsDir(脱敏)', r.attachmentsDir === '$HOME/wsA/附件', r.attachmentsDir);
+  check('report 不再有 reviews/ledger 角色', !('reviewsDir' in r) && !('ledgerDir' in r), JSON.stringify(Object.keys(r)));
   check('report 路径经 $HOME 脱敏', r.workspace === '$HOME/wsA' && r.bundlesDir.startsWith('$HOME/'), `${r.workspace} ${r.bundlesDir}`);
 } finally {
   process.chdir(originalCwd);
