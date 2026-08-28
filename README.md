@@ -2,7 +2,7 @@
 
 **draw & tell** — turn problems into stroke-by-stroke chalkboard explanations, from your terminal.
 
-> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `ls` / `tidy` work from a repo checkout
+> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `ls` / `tidy` / `init` / `doctor` work from a repo checkout
 > (Node ≥ 22.18, runs the TS sources via native type stripping). The npm release is still a name-reservation placeholder.
 
 drawtell(边画边讲):把题目变成逐笔画出、带讲解节奏的黑板动画。
@@ -18,6 +18,8 @@ drawtell dub <scene.ts|bundle-id> [--voice <v>] [--instruction <s>] [--model <m>
 drawtell note <scene.ts|bundle-id>                # lesson archive block → stdout (title + problem + final-frame wikilink + per-step narration; `markdown` field under --json), final frame copied to <paths.attachments>/<id>-final.png — appending into the journal is the caller's job
 drawtell ls                                       # workspace status: source / bundle / audio / snaps / review
 drawtell tidy <dir> [--older-than <days>] [--delete]   # remove unreferenced old files (lists only by default)
+drawtell init [dir]                               # scaffold / repair a workspace: idempotent gap-filling, existing files never touched
+drawtell doctor                                   # environment + workspace health checks, failures carry fix commands (exit 0/1)
 ```
 
 `snap` writes `snaps/<id>/step-<n>.png` (0 = blank board) and `index.json` (schema `drawtell-snaps` v2):
@@ -58,6 +60,20 @@ exist; `~` works) > a `drawtell.json` in the cwd > the `workspace` in `~/.config
 the cwd itself. `--workspace` decides the workspace and where `paths` land; scene-file arguments and
 `--out` / `--bundles` relative paths still resolve against the cwd. Every `--json` reports which
 workspace was used and how (`workspaceSource`: `flag` / `cwd` / `user-config` / `default`).
+
+`init` scaffolds the workspace skeleton (the dirs the CLI reads/writes plus the family sub-product dirs
+the workflows expect), writes a `drawtell.json` template and a `.gitignore`, and points
+`~/.config/drawtell/config.json` at the workspace when nothing is configured yet (it never re-points an
+existing setting). It is idempotent — re-run it any time to fill gaps; existing files are never
+overwritten, and the policy file (`drawtell.json`) is never regenerated: policy belongs to the family,
+broken policy is restored from git, not rebuilt by the machine. `doctor` makes silent failures visible:
+which workspace was resolved and why; config files that exist but no longer parse (these fail loudly
+everywhere now, instead of silently falling back to defaults); missing skeleton dirs; configured `paths`
+roles pointing at nothing; iCloud-evicted `.icloud` placeholders; plus environment probes for
+`serve` / `snap` / `dub`. New machine in three steps: `npm i -g drawtell` → `drawtell init <dir>` →
+`drawtell doctor`. Applications that need the same workspace resolution (dev servers, tools) import it
+from the `drawtell/workspace` subpath export (`resolveAppWorkspaceRoot` — env override > user config >
+`~/drawtell-workspace` — plus `readWorkspaceConfigSync` and `expandPath`) instead of copying the chain.
 
 Exit codes: `0` pass · `1` scene has problems (findings carry fix guidance) · `2` usage error ·
 `3` planned-but-unimplemented (reserved; no command returns it today) · `4` internal error. Every command

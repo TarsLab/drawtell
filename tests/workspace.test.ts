@@ -1,7 +1,9 @@
 /**
  * 工作区解析回归:优先级链(--workspace override > cwd 的 drawtell.json > 用户配置回落 > cwd 兜底)、
  * override 的展开(绝对 / ~ / 相对按 cwd)与目录不存在 → UsageError、inbox 角色缺省与覆盖、
- * workspaceReport 的 workspaceSource / inboxDir 与 $HOME 脱敏。
+ * workspaceReport 的 workspaceSource / inboxDir 与 $HOME 脱敏;
+ * 配置损坏必须响(坏 JSON → ConfigError,不再静默回落缺省)与应用侧解析链
+ * (resolveAppWorkspaceRoot:env 显式 > 用户配置 > ~/drawtell-workspace)。
  * 用户配置路径 ~/.config/drawtell/config.json 是模块级常量(按 homedir() 定死),而 POSIX 的
  * homedir() 读 $HOME——所以先把 HOME 指到临时目录、再动态 import workspace.ts,该分支就可注入。
  */
@@ -25,7 +27,7 @@ const originalCwd = process.cwd();
 process.env.HOME = home;
 
 // USER_CONFIG 在模块加载时按 homedir() 定死,必须先设 HOME 再 import
-const { UsageError, loadWorkspace, workspaceReport } = await import('../src/cli/workspace.ts');
+const { ConfigError, UsageError, loadWorkspace, resolveAppWorkspaceRoot, workspaceReport } = await import('../src/cli/workspace.ts');
 
 try {
   // 布景:全放在假 HOME 下,脱敏断言才有 $HOME 可看
@@ -108,6 +110,46 @@ try {
   check('report 带 attachmentsDir(脱敏)', r.attachmentsDir === '$HOME/wsA/附件', r.attachmentsDir);
   check('report 不再有 reviews/ledger 角色', !('reviewsDir' in r) && !('ledgerDir' in r), JSON.stringify(Object.keys(r)));
   check('report 路径经 $HOME 脱敏', r.workspace === '$HOME/wsA' && r.bundlesDir.startsWith('$HOME/'), `${r.workspace} ${r.bundlesDir}`);
+
+  // ---- 配置损坏必须响:cwd 的 drawtell.json 坏 → ConfigError(早先静默回落缺省,破坏被藏住)----
+  const wsBad = join(home, 'wsBad');
+  mkdirSync(wsBad);
+  writeFileSync(join(wsBad, 'drawtell.json'), '{ 这不是 json');
+  process.chdir(wsBad);
+  try {
+    await loadWorkspace();
+    check('cwd 的 drawtell.json 损坏 → ConfigError', false, '没有抛错');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    check('cwd 的 drawtell.json 损坏 → ConfigError', err instanceof ConfigError, `${(err as Error).constructor?.name}: ${msg}`);
+    check('损坏错误带脱敏路径与 git 指引', msg.includes('$HOME/wsBad') && msg.includes('git'), msg);
+  }
+
+  // ---- 应用侧解析链:env 显式 > 用户配置 > ~/drawtell-workspace ----
+  process.chdir(home);
+  const ae = resolveAppWorkspaceRoot('~/wsC');
+  check('app 链显式 → source env,~ 展开', ae.source === 'env' && ae.root === wsC, JSON.stringify(ae));
+  const au = resolveAppWorkspaceRoot(); // 上文用户配置仍指向 wsB
+  check('app 链回落用户配置', au.source === 'user-config' && au.root === wsB, JSON.stringify(au));
+  rmSync(join(home, '.config'), { recursive: true, force: true });
+  const ad = resolveAppWorkspaceRoot();
+  check('app 链缺省 ~/drawtell-workspace', ad.source === 'default' && ad.root === join(home, 'drawtell-workspace'), JSON.stringify(ad));
+
+  // ---- 用户配置损坏:两条链都要响 ----
+  mkdirSync(join(home, '.config', 'drawtell'), { recursive: true });
+  writeFileSync(join(home, '.config', 'drawtell', 'config.json'), '不是 json');
+  try {
+    resolveAppWorkspaceRoot();
+    check('app 链用户配置损坏 → ConfigError', false, '没有抛错');
+  } catch (err) {
+    check('app 链用户配置损坏 → ConfigError', err instanceof ConfigError, String(err));
+  }
+  try {
+    await loadWorkspace(); // cwd(home)无 drawtell.json → 走到用户配置
+    check('CLI 链用户配置损坏 → ConfigError', false, '没有抛错');
+  } catch (err) {
+    check('CLI 链用户配置损坏 → ConfigError', err instanceof ConfigError, String(err));
+  }
 } finally {
   process.chdir(originalCwd);
   rmSync(home, { recursive: true, force: true });

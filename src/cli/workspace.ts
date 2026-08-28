@@ -15,12 +15,28 @@
  *  3. $HOME 脱敏:--json 的输出会被 agent 带进上下文,不该带出用户名。
  */
 
+import { readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 
 /** 用法错误:main 捕获后 exit 2,错误信息即修复指南。 */
 export class UsageError extends Error {}
+
+/**
+ * 配置文件损坏:文件在,但不是合法 JSON。早先静默回落缺省——那会把破坏藏起来
+ * (paths 落点悄悄变错、政策悄悄丢失,症状是"列表空了"而不是"配置坏了"),必须响。
+ */
+export class ConfigError extends UsageError {
+  readonly file: string;
+  constructor(file: string, cause: string) {
+    super(
+      `配置文件解析失败:${redactHome(file)}(${cause})。` +
+        '修复 JSON 语法;文件在 git 里就 git diff 看改动、git checkout 回退。drawtell doctor 可逐项体检。',
+    );
+    this.file = file;
+  }
+}
 
 export interface WorkspacePaths {
   /** 课包目录(派生,build 可重来) */
@@ -37,7 +53,7 @@ export interface WorkspacePaths {
   inbox: string;
 }
 
-const ROLE_DEFAULTS: Record<keyof WorkspacePaths, string> = {
+export const ROLE_DEFAULTS: Record<keyof WorkspacePaths, string> = {
   bundles: 'bundles',
   snaps: 'snaps',
   attachments: 'attachments',
@@ -53,9 +69,10 @@ export interface DubPolicy {
   model?: string;
 }
 
+/** paths 是开放表:CLI 只认识 ROLE_DEFAULTS 里的角色,应用层角色(如 timetable)原样保留给消费方。 */
 interface RawConfig {
   title?: string;
-  paths?: Partial<Record<keyof WorkspacePaths, string>>;
+  paths?: Record<string, string>;
   dub?: DubPolicy;
 }
 
@@ -70,7 +87,8 @@ export interface Workspace {
   title: string;
 }
 
-const USER_CONFIG = join(homedir(), '.config', 'drawtell', 'config.json');
+/** 用户级配置(XDG):{"workspace": "<路径>"}。doctor 与 init 都要指名道姓,所以导出。 */
+export const USER_CONFIG = join(homedir(), '.config', 'drawtell', 'config.json');
 
 /** `~/x` → `<home>/x`;其余原样。相对路径按工作区根解析。 */
 export function expandPath(p: string, root: string): string {
@@ -95,51 +113,104 @@ export function redactDeep<T>(value: T): T {
   return value;
 }
 
-async function readJson<T>(file: string): Promise<T | null> {
+/** 读 JSON 配置:不存在 → null(缺省合法);存在但坏 → ConfigError(损坏必须响,见类注释)。 */
+async function readConfig<T>(file: string): Promise<T | null> {
+  let text: string;
   try {
-    return JSON.parse(await readFile(file, 'utf8')) as T;
+    text = await readFile(file, 'utf8');
   } catch {
     return null;
   }
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    throw new ConfigError(file, err instanceof Error ? err.message : String(err));
+  }
+}
+
+function readConfigSync<T>(file: string): T | null {
+  let text: string;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    throw new ConfigError(file, err instanceof Error ? err.message : String(err));
+  }
+}
+
+export interface ResolvedRoot {
+  root: string;
+  source: Workspace['source'];
 }
 
 /**
- * 解析工作区。优先级:`--workspace <dir>`(override,跳过一切回落)→ cwd 有 drawtell.json → 用它;
- * 否则看用户配置的 workspace;都没有就把 cwd 当工作区(现有行为,不破坏任何已有工作区)。
- * override 的目录必须存在(否则 UsageError,信息即修复指南);目录里没有 drawtell.json
- * 就用缺省 paths——与 cwd 分支同一行为。
+ * 只定根,不读工作区配置(doctor 要在配置损坏时仍能报出"根在哪",所以拆开)。
+ * 优先级:`--workspace <dir>`(override,跳过一切回落)→ cwd 有 drawtell.json →
+ * 用户配置的 workspace → cwd 兜底。override 的目录必须存在(UsageError,信息即修复指南)。
+ * cwd 分支按"文件存在"判定,不按"能解析"——坏掉的 drawtell.json 该响,不该静默换一个工作区。
  */
-export async function loadWorkspace(override?: string): Promise<Workspace> {
-  let root = resolve(process.cwd());
-  let source: Workspace['source'] = 'default';
-  let raw: RawConfig | null;
-
+export async function resolveRoot(override?: string): Promise<ResolvedRoot> {
+  const cwd = resolve(process.cwd());
   if (override !== undefined) {
-    root = expandPath(override, root);
+    const root = expandPath(override, cwd);
     const st = await stat(root).catch(() => null);
     if (!st?.isDirectory()) {
       throw new UsageError(
         `--workspace 指向的目录不存在:${redactHome(root)}(由 '${redactHome(override)}' 解析)。` +
-          '先 mkdir -p 创建它,或改指向已有的内容工作区根;目录里有没有 drawtell.json 都行,没有就用缺省 paths。',
+          '先 drawtell init 该目录(或 mkdir -p),或改指向已有的内容工作区根;目录里有没有 drawtell.json 都行,没有就用缺省 paths。',
       );
     }
-    raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
-    source = 'flag';
-    return assemble(root, source, raw);
+    return { root, source: 'flag' };
   }
+  const cwdConfig = await stat(join(cwd, 'drawtell.json')).catch(() => null);
+  if (cwdConfig?.isFile()) return { root: cwd, source: 'cwd' };
+  const user = await readConfig<{ workspace?: string }>(USER_CONFIG);
+  if (user?.workspace) return { root: expandPath(user.workspace, cwd), source: 'user-config' };
+  return { root: cwd, source: 'default' };
+}
 
-  raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
-  if (raw) {
-    source = 'cwd';
-  } else {
-    const user = await readJson<{ workspace?: string }>(USER_CONFIG);
-    if (user?.workspace) {
-      root = expandPath(user.workspace, root);
-      raw = await readJson<RawConfig>(join(root, 'drawtell.json'));
-      source = 'user-config';
-    }
-  }
+/** 读工作区 drawtell.json:不存在 → null;损坏 → ConfigError。应用层字段(timetable、gen…)原样在返回对象里。 */
+export async function readWorkspaceConfig(root: string): Promise<(RawConfig & Record<string, unknown>) | null> {
+  return readConfig(join(root, 'drawtell.json'));
+}
+
+/** readWorkspaceConfig 的同步版,给应用侧(vite 配置、工具脚本)用。 */
+export function readWorkspaceConfigSync(root: string): (RawConfig & Record<string, unknown>) | null {
+  return readConfigSync(join(root, 'drawtell.json'));
+}
+
+/**
+ * 解析工作区(定根 + 读配置 + 展开角色)。目录里没有 drawtell.json 就用缺省 paths;
+ * 有但解析不了 → ConfigError(exit 2,错误信息即修复指南)。
+ */
+export async function loadWorkspace(override?: string): Promise<Workspace> {
+  const { root, source } = await resolveRoot(override);
+  const raw = await readConfig<RawConfig>(join(root, 'drawtell.json'));
   return assemble(root, source, raw);
+}
+
+export interface AppWorkspaceRoot {
+  root: string;
+  source: 'env' | 'user-config' | 'default';
+}
+
+/**
+ * 应用侧解析链(dev server / 工具脚本,从代码仓启动,没有"cwd 即工作区"的语义):
+ * 显式指定(约定用 DRAWTELL_WORKSPACE 环境变量传进来)→ 用户配置 → <home>/drawtell-workspace。
+ * 与 CLI 链共用同一份用户配置与 ~ 展开;消费方 apps/web 与 lab/reading-gen(growth-apps),
+ * 早先它们各自逐字复制这条链,任何分歧只会表现成"静默的空列表"——所以收进权威模块,一处定义。
+ * 同步实现:消费场景都是启动期,且 vite 配置文件不方便顶层 await。
+ */
+export function resolveAppWorkspaceRoot(explicit?: string): AppWorkspaceRoot {
+  const cwd = resolve(process.cwd());
+  if (explicit) return { root: expandPath(explicit, cwd), source: 'env' };
+  const user = readConfigSync<{ workspace?: string }>(USER_CONFIG);
+  if (user?.workspace) return { root: expandPath(user.workspace, cwd), source: 'user-config' };
+  return { root: join(homedir(), 'drawtell-workspace'), source: 'default' };
 }
 
 function assemble(root: string, source: Workspace['source'], raw: RawConfig | null): Workspace {
