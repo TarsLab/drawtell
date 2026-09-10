@@ -11,7 +11,9 @@
     "dist/cli",
     "dist/player",
     "dist/glyphs",
-    "dist/schema"
+    "dist/schema",
+    "dist/web",
+    "!dist/web/fonts"
   ],
   "exports": {
     ".": {
@@ -71,7 +73,6 @@
     "@types/node": "^26.2.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "playwright": "^1.62.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^8.2.1"
@@ -96,5 +97,8 @@
     "react-dom": {
       "optional": true
     }
+  },
+  "optionalDependencies": {
+    "playwright": "^1.62.1"
   }
 }

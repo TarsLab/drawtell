@@ -9,10 +9,25 @@ import { redactDeep } from './workspace.ts';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces } from 'node:os';
-import { extname, join, resolve, sep } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const WEB_ROOT = fileURLToPath(new URL('../../dist/web', import.meta.url));
+
+/**
+ * 字体目录:npm 包不带 dist/web/fonts(13MB,Xiaolai 占 12MB),从 @excalidraw/excalidraw 的 dist/prod/fonts 现取
+ * (它是 peer,装了播放器的应用一定有);仓库检出里 pnpm build 会把同一份拷到 dist/web/fonts。
+ */
+export function fontsRoot(): string | null {
+  const local = join(WEB_ROOT, 'fonts');
+  try {
+    const pkg = createRequire(import.meta.url).resolve('@excalidraw/excalidraw/package.json');
+    return join(dirname(pkg), 'dist', 'prod', 'fonts');
+  } catch {
+    return local;
+  }
+}
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -84,6 +99,7 @@ export interface StartOptions {
 
 export async function startServer({ port, bundlesDir, title = 'drawtell' }: StartOptions): Promise<{ port: number; close: () => Promise<void> }> {
   const bundlesRoot = resolve(bundlesDir);
+  const fonts = (await stat(join(WEB_ROOT, 'fonts')).catch(() => null)) ? null : fontsRoot();
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
@@ -98,6 +114,8 @@ export async function startServer({ port, bundlesDir, title = 'drawtell' }: Star
       });
     } else if (pathname.startsWith('/bundles/')) {
       void sendFile(res, bundlesRoot, pathname.slice('/bundles'.length));
+    } else if (pathname.startsWith('/fonts/') && fonts) {
+      void sendFile(res, fonts, pathname.slice('/fonts'.length));
     } else {
       void sendFile(res, WEB_ROOT, pathname === '/' ? '/index.html' : pathname);
     }
