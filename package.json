@@ -1,6 +1,6 @@
 {
   "name": "drawtell",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "draw & tell — turn problems into stroke-by-stroke chalkboard explanations, from your terminal.",
   "type": "module",
   "bin": {
@@ -79,8 +79,8 @@
   },
   "dependencies": {
     "excalidraw-animate": "0.7.2",
-    "zod": "^4.4.3",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@excalidraw/excalidraw": "0.18.1",

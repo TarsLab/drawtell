@@ -15,8 +15,8 @@ export const FAMILY_DIRS = ['problems', 'captures', 'homework', 'tools', 'books'
 /** 进 git 的空目录用 .gitkeep 占位;books/ 整目录可再生不入库(见 GITIGNORE),不占位。 */
 export const NO_GITKEEP = new Set(['books']);
 
-export const GITIGNORE = `# 派生物不在工作区(bundles/snaps 缺省在工作区下,建议经 drawtell.json 的 paths
-# 指到 ~/.cache/drawtell/<名>/),这里兜底防手滑
+export const GITIGNORE = `# 派生物:bundles/snaps 缺省就在工作区下,不入库(build/snap 秒级再生,音频由 voxtell 缓存回填);
+# 要挪去别处用 drawtell.json 的 paths,这里的排除仍兜底
 bundles/
 snaps/
 node_modules/
@@ -34,6 +34,6 @@ export const CONFIG_TEMPLATE = `{
   "title": "drawtell",
   "paths": {},
   "dub": {},
-  "_note": "工作区政策,家长确认后改这里;机器不会自动重建或覆盖本文件,写坏了靠 git 回退,drawtell doctor 可体检。title = 孩子端界面标题。paths = 目录角色映射:bundles/snaps 是派生物,可挪出工作区(如 ~/.cache/drawtell/<名>/bundles);photos/notes/kids/inbox/attachments 是家长面角色,可指到 Obsidian vault 的绝对路径(双根布局见 drawtell 仓 docs/文件系统.md)。dub = 配音政策:voice 没有默认值(音色是家长的选择),候选看 voxtell voices,试听 voxtell preview <voice>。"
+  "_note": "工作区政策,家长确认后改这里;机器不会自动重建或覆盖本文件,写坏了靠 git 回退,drawtell doctor 可体检。title = 孩子端界面标题。paths = 目录角色映射:bundles/snaps 是派生物,缺省就在工作区下、.gitignore 排除(建议),也可经 paths 挪到别处;photos/notes/kids/inbox/attachments 是家长面角色,可指到 Obsidian vault 的绝对路径(双根布局见 drawtell 仓 docs/文件系统.md)。dub = 配音政策:voice 没有默认值(音色是家长的选择),候选看 voxtell voices,试听 voxtell preview <voice>。"
 }
 `;

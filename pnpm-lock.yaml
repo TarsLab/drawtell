@@ -30,9 +30,6 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.1
         version: 18.3.7(@types/react@18.3.31)
-      playwright:
-        specifier: ^1.62.1
-        version: 1.62.1
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -42,6 +39,10 @@ importers:
       vite:
         specifier: ^8.2.1
         version: 8.2.1(@types/node@26.2.0)
+    optionalDependencies:
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
 
 packages:
 
@@ -2516,13 +2517,15 @@ snapshots:
 
   picomatch@4.0.5: {}
 
-  playwright-core@1.62.1: {}
+  playwright-core@1.62.1:
+    optional: true
 
   playwright@1.62.1:
     dependencies:
       playwright-core: 1.62.1
     optionalDependencies:
       fsevents: 2.3.2
+    optional: true
 
   png-chunk-text@1.0.0: {}
 

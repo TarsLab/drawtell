@@ -2,8 +2,9 @@
 
 **draw & tell** — turn problems into stroke-by-stroke chalkboard explanations, from your terminal.
 
-> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `ls` / `tidy` / `init` / `doctor` work from a repo checkout
-> (Node ≥ 22.18, runs the TS sources via native type stripping). The npm release is still a name-reservation placeholder.
+> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `note` / `ls` / `tidy` / `init` / `doctor` work,
+> either from npm (`npm i -g drawtell`, Node ≥ 22.18) or from a repo checkout (which runs the TS sources via
+> native type stripping). `snap` needs `npx playwright install chromium` (playwright is an optional dependency).
 
 drawtell(边画边讲):把题目变成逐笔画出、带讲解节奏的黑板动画。
 
