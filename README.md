@@ -2,7 +2,7 @@
 
 **draw & tell** — turn problems into stroke-by-stroke chalkboard explanations, from your terminal.
 
-> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `note` / `ls` / `tidy` / `init` / `doctor` work,
+> **Status: early.** `check` / `build` / `serve` / `snap` / `dub` / `note` / `ls` / `init` / `doctor` work,
 > either from npm (`npm i -g drawtell`, Node ≥ 22.18) or from a repo checkout (which runs the TS sources via
 > native type stripping). `snap` needs `npx playwright install chromium` (playwright is an optional dependency).
 
@@ -18,7 +18,6 @@ drawtell snap <scene.ts|bundle-id> [--step <n>] [--no-cursor] [--out <dir>] [--b
 drawtell dub <scene.ts|bundle-id> [--voice <v>] [--instruction <s>] [--model <m>] [--dry-run] [--force] [--voxtell <bin>]   # narration audio via voxtell (voice from drawtell.json if omitted)
 drawtell note <scene.ts|bundle-id>                # lesson archive block → stdout (title + problem + final-frame wikilink + per-step narration; `markdown` field under --json), final frame copied to <paths.attachments>/<id>-final.png — appending into the journal is the caller's job
 drawtell ls                                       # workspace status: source / bundle / audio / snaps / review
-drawtell tidy <dir> [--older-than <days>] [--delete]   # remove unreferenced old files (lists only by default)
 drawtell init [dir]                               # scaffold / repair a workspace: idempotent gap-filling, existing files never touched
 drawtell doctor                                   # environment + workspace health checks, failures carry fix commands (exit 0/1)
 ```
@@ -128,9 +127,24 @@ node bin/drawtell.js build scenes/dengche.ts   # → bundles/dengche/
 Layout: `src/player/` — the chalkboard player engine (stroke-by-stroke SVG replay via
 excalidraw + excalidraw-animate, pointer tracking, per-step pauses); `src/web/` — the
 polishing bench and the player page `drawtell serve` / `snap` drive; `src/cli/` — the CLI (check /
-build / serve / snap / dub / ls / tidy); `src/schema/` — the scene contract (zod) and lesson-bundle contract; `scenes/` —
+build / serve / snap / dub / ls); `skills/` — the four agent skills shipped with the package (see Skills); `src/schema/` — the scene contract (zod) and lesson-bundle contract; `scenes/` —
 seed scenes (authored in TS, the source format; lesson bundles in JSON are the build
 artifact).
+
+## Skills
+
+Four agent skills ship inside the npm package under `skills/<name>/` (SKILL.md + references; frontmatter is
+`name` + `description` only, so Claude Code and Qwen Code both mount them). Copy a directory into your project's
+`.claude/skills/` or `.qwen/skills/`; [cotutor](https://github.com/TarsLab/cotutor) does this on `init`.
+
+- `drawtell-cli` — how to run the tool chain: workspace resolution, check / snap feedback ladder, dub, serve
+- `drawtell-scene` — the scene contract: what a `ChalkScene` TS module must look like to be valid and fit the board
+- `drawtell-teaching` — how to explain a problem: the explanation file format, the model library (`models/`), narration patterns, colors
+- `drawtell-verify` — reviewing keyframe screenshots against the narration, as an independent checker
+
+`tests/skills.test.ts` lints them (frontmatter keys, name = directory, relative links resolve, no `!` or `>word`
+inside inline backticks — those trip Claude Code's bash permission scan). They moved here from the retired
+`drawtell-skills` repo on 2026-09-15.
 
 ## Filesystem
 
