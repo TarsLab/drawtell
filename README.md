@@ -14,7 +14,8 @@ drawtell(边画边讲):把题目变成逐笔画出、带讲解节奏的黑板动
 drawtell check <scene.ts> [--no-types] [--json] # types (embedded tsc, zero workspace config) + schema + stroke-order + layout checks, errors as fix guides
 drawtell build <scene.ts> [--out <dir>]         # scene → lesson bundle (scene.json + manifest.json), idempotent
 drawtell serve [--port <n>] [--bundles <dir>]   # / = bundle list page (iPad entry) · ?scene=<id> player · /bundles/<id>/ + /api/bundles for LAN distribution
-drawtell snap <scene.ts|bundle-id> [--step <n>] [--no-cursor] [--out <dir>] [--bundles <dir>]   # keyframe screenshots + index.json
+drawtell snap <scene.ts|bundle-id> [--step <n>] [--no-cursor] [--out <dir>] [--bundles <dir>]   # keyframe screenshots + index.json (bakes first when the picture is stale)
+drawtell bake <scene.ts|bundle-id> [--bundles <dir>]  # bake the picture into bundles/<id>/bake.json: no excalidraw / SMIL at play time
 drawtell dub <scene.ts|bundle-id> [--voice <v>] [--instruction <s>] [--model <m>] [--dry-run] [--force] [--voxtell <bin>]   # narration audio via voxtell (voice from drawtell.json if omitted)
 drawtell note <scene.ts|bundle-id>                # lesson archive block → stdout (title + problem + final-frame wikilink + per-step narration; `markdown` field under --json), final frame copied to <paths.attachments>/<id>-final.png — appending into the journal is the caller's job
 drawtell ls                                       # workspace status: source / bundle / audio / snaps / review
@@ -109,6 +110,13 @@ bundle without a browser:
 - **What a circle covers** — `circleHits(clock, ms, path, { groups, blocks, bounds })` → the groups, blocks,
   labelled elements, text and piles of shapes inside a child's circle at that moment; `describeCircle` says it in
   one Chinese sentence (「圈住了:散的 3 根小棒;文字『3』」).
+
+- **Baked pictures** — `drawtell bake` runs excalidraw once, in a browser, after build: the static export (the very
+  same picture the old player drew), every path's length, the pointer's track and the embedded font subset go into
+  `bake.json`. `renderFrameSvg(baked, frameAt(clock, ms))` turns any moment into a plain SVG string (thumbnails on a
+  server); `drawtell/render`'s `mountBaked` builds the SVG once in a browser and `paint(frame)` reveals strokes with
+  `stroke-dashoffset` and text with a clip box. No SMIL, so seeking is exact and Safari behaves. Durations are not in
+  the bake: re-dubbing never needs a re-bake; changing the picture does (`source.hash`, `bakeMatches`).
 
 Scenes can name what they draw: `groups: [{ id, label, elementIds }]` (several strokes that are one thing, e.g.
 「一捆 10 根小棒」) and `label` on a single element. Names are semantics only — they never change how or in what order
