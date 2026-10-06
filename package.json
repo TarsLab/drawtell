@@ -1,6 +1,6 @@
 {
   "name": "drawtell",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "draw & tell — turn problems into stroke-by-stroke chalkboard explanations, from your terminal.",
   "type": "module",
   "bin": {
@@ -10,6 +10,7 @@
     "bin",
     "skills",
     "dist/cli",
+    "dist/core",
     "dist/player",
     "dist/glyphs",
     "dist/schema",
@@ -26,6 +27,10 @@
       "default": "./dist/player/index.js"
     },
     "./player/chalk-player.css": "./dist/player/chalk-player.css",
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
     "./glyphs": {
       "types": "./dist/glyphs/index.d.ts",
       "default": "./dist/glyphs/index.js"
@@ -45,9 +50,9 @@
   "scripts": {
     "dev": "pnpm run sync-fonts && vite",
     "build": "pnpm run sync-fonts && vite build",
-    "build:lib": "rm -rf dist/cli dist/player dist/schema dist/glyphs && tsc -p tsconfig.build.json && cp src/player/chalk-player.css dist/player/ && node scripts/fix-dts.mjs",
+    "build:lib": "rm -rf dist/cli dist/core dist/player dist/schema dist/glyphs && tsc -p tsconfig.build.json && cp src/player/chalk-player.css dist/player/ && node scripts/fix-dts.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.cli.json",
-    "test": "node --experimental-strip-types tests/letters.test.ts && node --experimental-strip-types tests/typecheck.test.ts && node --experimental-strip-types tests/scene-v2.test.ts && node --experimental-strip-types tests/scene-files.test.ts && node --experimental-strip-types tests/workspace.test.ts && node --experimental-strip-types tests/init-doctor.test.ts && node --experimental-strip-types tests/note.test.ts && node --experimental-strip-types tests/skills.test.ts",
+    "test": "node --experimental-strip-types tests/letters.test.ts && node --experimental-strip-types tests/typecheck.test.ts && node --experimental-strip-types tests/scene-v2.test.ts && node --experimental-strip-types tests/core.test.ts && node --experimental-strip-types tests/scene-files.test.ts && node --experimental-strip-types tests/workspace.test.ts && node --experimental-strip-types tests/init-doctor.test.ts && node --experimental-strip-types tests/note.test.ts && node --experimental-strip-types tests/skills.test.ts",
     "sync-fonts": "rm -rf public/fonts && mkdir -p public && cp -R node_modules/@excalidraw/excalidraw/dist/prod/fonts public/fonts",
     "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run build:lib && node --input-type=module -e \"const { main } = await import('./dist/cli/main.js'); await main(['--version']);\""
   },

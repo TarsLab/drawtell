@@ -15,7 +15,7 @@ async function* walk(dir) {
 }
 
 let fixed = 0;
-for (const dir of ['dist/cli', 'dist/player', 'dist/schema', 'dist/glyphs']) {
+for (const dir of ['dist/cli', 'dist/core', 'dist/player', 'dist/schema', 'dist/glyphs']) {
   for await (const file of walk(dir)) {
     const src = await readFile(file, 'utf8');
     const out = src.replace(/(['"])(\.{1,2}\/[^'"]*)\.tsx?\1/g, '$1$2.js$1');
