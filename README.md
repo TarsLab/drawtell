@@ -105,6 +105,9 @@ v2 additions, all consumed here:
 - **`blocks[]`** — word/character hit targets anchored to element ids (no coordinate
   copies); `blockBounds()` / `allBlockBounds()` give the hit rectangles.
 - **`subscenes[]`** — popup mini-scenes (own coordinate space) triggered by a block.
+- **`background`** — an optional image under the strokes (`{ src, width, height }`, e.g. a photo of
+  the problem). The board becomes the image: scene coordinates are image pixels, `build` copies the
+  file into the bundle as `background.<ext>`, and the player resolves it against `audioBaseUrl`.
 - **Transport** — music-player controls: pause / resume / previous / next segment
   (segment = step). Drive it via a ref (`ChalkPlayerHandle`) or the built-in bar
   (`controls` prop). Jumps always redraw a segment from its start; `prev` in a gap

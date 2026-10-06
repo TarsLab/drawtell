@@ -54,6 +54,16 @@ function probeAudioDurations(scene: ChalkScene, base: string): Promise<Array<num
   );
 }
 
+/** 背景图先解码好再亮板:否则 snap 会截到图还没出来的一帧;失败不拦流程(退成白板) */
+function preloadImage(href: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = href;
+  });
+}
+
 function stopAudio(audio: HTMLAudioElement | null): void {
   if (!audio) return;
   audio.onended = null;
@@ -82,7 +92,7 @@ export interface ChalkPlayerProps {
   pointerImg?: string;
   /** 是否画笔尖(默认画);snap --no-cursor 关掉,keyframe 只剩笔迹 */
   pointer?: boolean;
-  /** 课包目录 URL(如 /bundles/<id>/),步的 audioSrc 相对它;不给则不放音 */
+  /** 课包目录 URL(如 /bundles/<id>/),步的 audioSrc 与场景的 background.src 相对它;不给则不放音 */
   audioBaseUrl?: string;
   /** 按讲稿音频时长拉伸该步笔画(默认开;只拉不缩) */
   stretchToAudio?: boolean;
@@ -141,9 +151,13 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
         if (cancelled) return;
         skeletons = stretchToAudio(scene.skeletons, scene.steps, { maxStretch, durations: probed }).skeletons;
       }
+      const bg = scene.background && { href: `${audioBaseUrl ?? ''}${scene.background.src}`, width: scene.background.width, height: scene.background.height };
+      if (bg) await preloadImage(bg.href);
+      if (cancelled) return;
       const { svg, finishedMs } = await buildAnimatedSvg(skeletons, {
         pointerImg: pointer ? (pointerImg ?? DEFAULT_POINTER_IMG) : undefined,
         pointerWidth: '30',
+        background: bg,
       });
       if (cancelled || !stageRef.current) return;
       windowsRef.current = computeStepWindows(skeletons, scene.steps);
