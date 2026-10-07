@@ -77,10 +77,11 @@ Excalifont 的倾斜与字宽起伏是正文的手写味,照着它写会把字�
 
 ```ts
 import { wordSkeletons } from 'drawtell/glyphs';
-import { buildAnimatedSvg } from 'drawtell/player';
+import { bakeSkeletons } from 'drawtell/bake';   // 浏览器里,excalidraw 跑一次
+import { mountBaked } from 'drawtell/render';
 
-const strokes = wordSkeletons('ram', { xHeight: 120, x: 80, y: 300 });
-const { svg } = await buildAnimatedSvg(strokes);   // 一笔一个元素,数组顺序即笔顺
+const strokes = wordSkeletons('ram', { xHeight: 120, x: 80, y: 300 });   // 一笔一个元素,数组顺序即笔顺
+const { svg, paint } = mountBaked(await bakeSkeletons(strokes));          // paint(某一刻每笔画了多少)
 ```
 
 `wordAdvance(word, { xHeight })` 给排版宽度;`GLYPHS`(a–z 与 A–Z 的查找入口;`LOWERCASE` / `UPPERCASE` 是它的两半)给归一化字形数据(比对用);

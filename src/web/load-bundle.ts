@@ -5,6 +5,7 @@
 
 import type { ChalkScene } from '../player';
 import { sceneSchema } from '../schema/scene';
+import { bakeMatches, type BakedLesson } from '../core/bake';
 
 async function fetchJson(url: string): Promise<Record<string, unknown>> {
   const res = await fetch(url);
@@ -42,4 +43,16 @@ export async function loadBundle(id: string): Promise<ChalkScene> {
     throw new Error(`课包 ${id} 不符合场景契约:${first}`);
   }
   return parsed.data;
+}
+
+/** 课包烤好的画面:bake.json 在、和 scene.json 的画面对得上才给;没有就 null(播放器现烤) */
+export async function loadBaked(id: string): Promise<BakedLesson | null> {
+  try {
+    const [b, s] = await Promise.all([fetch(`/bundles/${id}/bake.json`), fetch(`/bundles/${id}/scene.json`)]);
+    if (!b.ok || !s.ok) return null;
+    const baked: unknown = await b.json();
+    return bakeMatches(baked, (await s.json()) as { skeletons?: unknown; background?: unknown }) ? baked : null;
+  } catch {
+    return null;
+  }
 }

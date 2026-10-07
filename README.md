@@ -90,9 +90,12 @@ animation pipeline. See [docs/glyphs.md](docs/glyphs.md).
 
 ```ts
 import { wordSkeletons } from 'drawtell/glyphs';
-import { buildAnimatedSvg } from 'drawtell/player';
+import { bakeSkeletons } from 'drawtell/bake';      // browser + excalidraw, once
+import { mountBaked } from 'drawtell/render';         // no excalidraw
 
-const { svg } = await buildAnimatedSvg(wordSkeletons('ram', { xHeight: 120, x: 80, y: 300 }));
+const picture = await bakeSkeletons(wordSkeletons('ram', { xHeight: 120, x: 80, y: 300 }));
+const { svg, paint } = mountBaked(picture);
+paint(new Map(picture.elements.map((e) => [e.id, 1])));   // or frameAt(clock, ms) for any moment
 ```
 
 ## Core
@@ -116,7 +119,9 @@ bundle without a browser:
   `bake.json`. `renderFrameSvg(baked, frameAt(clock, ms))` turns any moment into a plain SVG string (thumbnails on a
   server); `drawtell/render`'s `mountBaked` builds the SVG once in a browser and `paint(frame)` reveals strokes with
   `stroke-dashoffset` and text with a clip box. No SMIL, so seeking is exact and Safari behaves. Durations are not in
-  the bake: re-dubbing never needs a re-bake; changing the picture does (`source.hash`, `bakeMatches`).
+  the bake: re-dubbing never needs a re-bake; changing the picture does (`source.hash`, `bakeMatches`). `ChalkPlayer` and
+  the player page play baked pictures too; given none, they bake in the browser via `drawtell/bake` (the only entry
+  that loads excalidraw), so `snap` shoots exactly what children see.
 
 Scenes can name what they draw: `groups: [{ id, label, elementIds }]` (several strokes that are one thing, e.g.
 「一捆 10 根小棒」) and `label` on a single element. Names are semantics only — they never change how or in what order
@@ -125,7 +130,8 @@ anything is drawn.
 ## Player
 
 `drawtell/player` exports the `ChalkPlayer` React component plus the primitives it is
-built from (`buildAnimatedSvg`, `computeStepWindows`, `stretchToAudio`). Scene protocol
+built from (`computeStepWindows`, `stretchToAudio`; the picture comes from `bake.json` or, for an unbaked bundle,
+`drawtell/bake` in the browser — the only place excalidraw is loaded). Scene protocol
 v2 additions, all consumed here:
 
 - **`template: 'static'`** — a scene with no timeline (`steps: []`): the player renders
@@ -156,7 +162,7 @@ node bin/drawtell.js build scenes/dengche.ts   # → bundles/dengche/
 ```
 
 Layout: `src/player/` — the chalkboard player engine (stroke-by-stroke SVG replay via
-excalidraw + excalidraw-animate, pointer tracking, per-step pauses); `src/web/` — the
+baked picture + its own clock, pointer tracking, per-step pauses; `src/player/bake.ts` is the one excalidraw user); `src/web/` — the
 polishing bench and the player page `drawtell serve` / `snap` drive; `src/cli/` — the CLI (check /
 build / serve / snap / dub / ls); `skills/` — the four agent skills shipped with the package (see Skills); `src/schema/` — the scene contract (zod) and lesson-bundle contract; `scenes/` —
 seed scenes (authored in TS, the source format; lesson bundles in JSON are the build

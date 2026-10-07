@@ -1,8 +1,9 @@
 /**
  * 接力画图播放器:软件画一步,气口停,点一下继续(朗读子产品"接力朗读"的图形孪生)。
  *
- * 驱动方式:整条 SMIL 时间轴连续编排,步边界处 pauseAnimations();
- * 边界取自 timeline.ts 的确定性计算,气口(pauseAfter)等待点击后 unpause。
+ * 驱动方式:画面是烤好的(bake.json → drawtell/render 的 mountBaked),时钟自己管——SVG 时间线上的一刻 t(毫秒,含 START_MS),
+ * 每帧按 t 算每个元素画了多少(core 的 elementsAtSvgTime)再 paint;没有 SMIL。步边界取自 timeline.ts 的确定性计算,
+ * 到边界停住,气口(pauseAfter)等待点击后接着走。没给烤好的画面(baked)就在浏览器里现烤一份(按需装 excalidraw)。
  * 配音:步有 audioSrc(相对课包目录)时,该步开始即播讲稿音频,与画同时进行;
  * 一步结束 = 画完 且 音频放完(哪个晚等哪个),再进气口/下一步。音频取不到或放不出不拦流程。
  * 拉伸:有 audioDurationMs 的步(dub 写进 manifest;缺了就在装载时探测一次 metadata),
@@ -18,9 +19,10 @@
  */
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { buildAnimatedSvg } from './excalidraw-io.ts';
-import { DEFAULT_POINTER_IMG } from './pointer.ts';
-import { computeStepWindows, FREEZE_EPS_MS, freezeTimeSec, START_MS, stretchToAudio, type StepWindow } from './timeline.ts';
+import type { BakedPicture } from '../core/bake.ts';
+import { elementsAtSvgTime, lessonClock, type LessonClock } from '../core/clock.ts';
+import { mountBaked, type MountedLesson } from '../render/index.ts';
+import { computeStepWindows, FREEZE_EPS_MS, START_MS, type StepWindow } from './timeline.ts';
 import type { ChalkPhase, ChalkScene } from './types.ts';
 
 /**
@@ -85,6 +87,8 @@ export interface ChalkPlayerHandle {
 
 export interface ChalkPlayerProps {
   scene: ChalkScene;
+  /** 烤好的画面(课包的 bake.json,调用方用 bakeMatches 对过);不给就在浏览器里现烤(慢,要装 excalidraw) */
+  baked?: BakedPicture | null;
   /** 画完一步是否允许点击跳过正在画的笔(打磨台用;孩子端默认关) */
   allowSkip?: boolean;
   /** 装载后直接定格在第 n 步画完处(1 起;0 = 空板),snap 截图用 */
@@ -104,11 +108,17 @@ export interface ChalkPlayerProps {
 }
 
 export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(function ChalkPlayer(
-  { scene, allowSkip, seekStep, pointerImg, pointer = true, audioBaseUrl, stretchToAudio: stretch = true, maxStretch = 5, controls, onPhaseChange }: ChalkPlayerProps,
+  { scene, baked, allowSkip, seekStep, pointerImg, pointer = true, audioBaseUrl, stretchToAudio: stretch = true, maxStretch = 5, controls, onPhaseChange }: ChalkPlayerProps,
   ref,
 ) {
   const stageRef = useRef<HTMLDivElement>(null);
+  // 画面与时钟:svgRef 是画面在不在(装好了没);t = SVG 时间线上的这一刻,running = 时钟在走
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const mountedRef = useRef<MountedLesson | null>(null);
+  const clockRef = useRef<LessonClock | null>(null);
+  const tRef = useRef(0);
+  const runningRef = useRef(false);
+  const lastTsRef = useRef(0);
   const windowsRef = useRef<StepWindow[]>([]);
   const rafRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -144,48 +154,56 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     cancelAnimationFrame(rafRef.current);
     setPausedBoth(false);
     transition('loading', 0);
+    runningRef.current = false;
     (async () => {
-      let skeletons = scene.skeletons;
-      if (stretch) {
-        const probed = audioBaseUrl ? await probeAudioDurations(scene, audioBaseUrl) : undefined;
-        if (cancelled) return;
-        skeletons = stretchToAudio(scene.skeletons, scene.steps, { maxStretch, durations: probed }).skeletons;
-      }
-      const bg = scene.background && { href: `${audioBaseUrl ?? ''}${scene.background.src}`, width: scene.background.width, height: scene.background.height };
-      if (bg) await preloadImage(bg.href);
+      // 时长:有配音的步按配音拉伸(manifest 没写时长的,装载时探一次 metadata);stretch 关 = 按作者写的时长画
+      const probed = stretch && audioBaseUrl ? await probeAudioDurations(scene, audioBaseUrl) : undefined;
       if (cancelled) return;
-      const { svg, finishedMs } = await buildAnimatedSvg(skeletons, {
-        pointerImg: pointer ? (pointerImg ?? DEFAULT_POINTER_IMG) : undefined,
-        pointerWidth: '30',
-        background: bg,
-      });
+      const timed = stretch ? scene.steps : scene.steps.map(({ audioDurationMs: _d, ...s }) => s);
+      const clock = lessonClock(scene.skeletons, timed, { durations: probed, maxStretch });
+      const picture = baked ?? (await (await import('./bake.ts')).bakeSkeletons(scene.skeletons, { background: scene.background }));
+      const bgHref = picture.background ? `${audioBaseUrl ?? ''}${picture.background.src}` : undefined;
+      if (bgHref) await preloadImage(bgHref);
       if (cancelled || !stageRef.current) return;
-      windowsRef.current = computeStepWindows(skeletons, scene.steps);
-      svg.removeAttribute('height');
-      svg.removeAttribute('width');
+      const mounted = mountBaked(picture, { backgroundHref: bgHref, pointer, pointerImg });
+      const svg = mounted.svg;
+      clockRef.current = clock;
+      mountedRef.current = mounted;
+      windowsRef.current = computeStepWindows(clock.skeletons, scene.steps);
       svg.style.width = '100%';
       svg.style.height = 'auto';
       stageRef.current.replaceChildren(svg);
       svgRef.current = svg;
       if (!scene.steps.length) {
         // 静态场景(template 'static'):没有时间轴,装载即整幅定格;块交互由上层画布接管
-        svg.setCurrentTime(finishedMs / 1000);
+        mounted.paint(new Map(picture.elements.map((e) => [e.id, 1])));
         transition('done', 0);
       } else if (seekStep != null && seekStep > 0) {
-        // 定格:SMIL 暂停态下 setCurrentTime 同步渲染到该时刻
+        // 定格:画到第 n 步画完处(退半毫秒,不露下一笔)
         const idx = Math.min(seekStep, scene.steps.length) - 1;
-        svg.setCurrentTime(freezeTimeSec(windowsRef.current[idx]));
+        setT(windowsRef.current[idx].endMs - FREEZE_EPS_MS);
         transition(idx >= scene.steps.length - 1 ? 'done' : 'gap', idx);
       } else {
+        setT(START_MS);
         transition('ready', 0);
       }
-    })();
+    })().catch((e: unknown) => console.error('chalk-player:', e));
     return () => {
       cancelled = true;
+      runningRef.current = false;
       cancelAnimationFrame(rafRef.current);
       stopAudio(audioRef.current);
     };
-  }, [scene, pointerImg, pointer, seekStep, audioBaseUrl, stretch, maxStretch, transition, setPausedBoth]);
+    // setT 只读 ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, baked, pointerImg, pointer, seekStep, audioBaseUrl, stretch, maxStretch, transition, setPausedBoth]);
+
+  /** 画到 SVG 时间线上的这一刻 */
+  function setT(ms: number): void {
+    tRef.current = ms;
+    const clock = clockRef.current;
+    if (clock) mountedRef.current?.paint(new Map(elementsAtSvgTime(clock, ms).map((e) => [e.id, e.progress])));
+  }
 
   // 一步收尾:画完且音频放完才算;之后按 pauseAfter 进气口或直接下一步
   const finishStep = useCallback(
@@ -207,15 +225,19 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
       const svg = svgRef.current;
       if (!svg) return;
       const win = windowsRef.current[step];
-      const tick = () => {
-        if (phaseRef.current !== 'drawing' || pausedRef.current || svgRef.current !== svg) return;
-        if (svg.getCurrentTime() * 1000 >= win.endMs - FREEZE_EPS_MS) {
-          svg.pauseAnimations();
-          svg.setCurrentTime(freezeTimeSec(win));
+      lastTsRef.current = performance.now();
+      const tick = (ts: number) => {
+        if (phaseRef.current !== 'drawing' || pausedRef.current || svgRef.current !== svg || !runningRef.current) return;
+        const next = tRef.current + (ts - lastTsRef.current);
+        lastTsRef.current = ts;
+        if (next >= win.endMs - FREEZE_EPS_MS) {
+          runningRef.current = false;
+          setT(win.endMs - FREEZE_EPS_MS);
           drawDoneRef.current = true;
           finishStep(step);
           return;
         }
+        setT(next);
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
@@ -247,7 +269,7 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     [scene, audioBaseUrl, finishStep],
   );
 
-  // 画一步:unpause 让 SMIL 走,同时起音频
+  // 画一步:让时钟走,同时起音频
   const drawStep = useCallback(
     (step: number) => {
       const svg = svgRef.current;
@@ -256,7 +278,7 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
       transition('drawing', step);
       drawDoneRef.current = false;
       startAudio(step);
-      svg.unpauseAnimations();
+      runningRef.current = true;
       tickUntilEnd(step);
     },
     [transition, startAudio, tickUntilEnd, setPausedBoth],
@@ -268,9 +290,9 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     if (!svg) return;
     cancelAnimationFrame(rafRef.current);
     stopAudio(audioRef.current);
-    svg.pauseAnimations();
-    // 跳过 SMIL 前导留白,直接从第一笔前起画
-    svg.setCurrentTime((START_MS - 200) / 1000);
+    runningRef.current = false;
+    // 跳过前导留白,直接从第一笔前起画
+    setT(START_MS - 200);
     drawStep(0);
   }, [drawStep]);
 
@@ -284,9 +306,9 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
       const idx = Math.max(0, Math.min(step, scene.steps.length - 1));
       cancelAnimationFrame(rafRef.current);
       stopAudio(audioRef.current);
-      svg.pauseAnimations();
+      runningRef.current = false;
       // 段起点 = 上一段末笔画完处;首段从前导留白后起画
-      svg.setCurrentTime(idx === 0 ? (START_MS - 200) / 1000 : windowsRef.current[idx].startMs / 1000);
+      setT(idx === 0 ? START_MS - 200 : windowsRef.current[idx].startMs);
       drawStep(idx);
     },
     [scene, drawStep],
@@ -301,9 +323,9 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     setPausedBoth(false);
     drawDoneRef.current = true;
     audioDoneRef.current = true;
-    svg.pauseAnimations();
+    runningRef.current = false;
     const last = windowsRef.current.length - 1;
-    svg.setCurrentTime(freezeTimeSec(windowsRef.current[last]));
+    setT(windowsRef.current[last].endMs - FREEZE_EPS_MS);
     transition('done', last);
   }, [scene, transition, setPausedBoth]);
 
@@ -312,7 +334,7 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     if (!svg || phaseRef.current !== 'drawing' || pausedRef.current) return;
     setPausedBoth(true);
     cancelAnimationFrame(rafRef.current);
-    svg.pauseAnimations();
+    runningRef.current = false;
     audioRef.current?.pause();
   }, [setPausedBoth]);
 
@@ -320,9 +342,9 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
     const svg = svgRef.current;
     if (!svg || phaseRef.current !== 'drawing' || !pausedRef.current) return;
     setPausedBoth(false);
-    // 画未完才放行 SMIL——画已定格、只剩音频时 unpause 会闯进下一段的笔
+    // 画未完才让时钟走——画已定格、只剩音频时再走会闯进下一段的笔
     if (!drawDoneRef.current) {
-      svg.unpauseAnimations();
+      runningRef.current = true;
       tickUntilEnd(stepRef.current);
     }
     if (!audioDoneRef.current) {
@@ -401,7 +423,7 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
           // 打磨台快进:画与音都跳到步尾
           stopAudio(audioRef.current);
           audioDoneRef.current = true;
-          svg.setCurrentTime(freezeTimeSec(windowsRef.current[stepRef.current]));
+          tRef.current = windowsRef.current[stepRef.current].endMs;
         }
         break;
     }

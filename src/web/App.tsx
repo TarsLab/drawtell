@@ -15,7 +15,8 @@ import type { ChalkPhase, ChalkScene } from '../player';
 import { bimoduo } from '../../scenes/bimoduo';
 import { dengche } from '../../scenes/dengche';
 import { zuqiu } from '../../scenes/zuqiu';
-import { loadBundle } from './load-bundle';
+import { loadBaked, loadBundle } from './load-bundle';
+import type { BakedLesson } from '../core/bake';
 
 const BUILTIN: ChalkScene[] = [dengche, zuqiu, bimoduo];
 
@@ -67,6 +68,8 @@ function Shelf({ rows, title }: { rows: BundleRow[]; title: string }) {
 export function App() {
   const q = useMemo(readQuery, []);
   const [scene, setScene] = useState<ChalkScene | null>(q.sceneId ? null : BUILTIN[0]);
+  // 课包烤好的画面(bake.json,对得上才用);打磨台的种子场景没有,播放器现烤
+  const [baked, setBaked] = useState<BakedLesson | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [phase, setPhase] = useState<ChalkPhase>('loading');
   const [stepIndex, setStepIndex] = useState(0);
@@ -103,8 +106,8 @@ export function App() {
 
   useEffect(() => {
     if (!q.sceneId) return;
-    loadBundle(q.sceneId)
-      .then(setScene)
+    Promise.all([loadBundle(q.sceneId), loadBaked(q.sceneId)])
+      .then(([s, b]) => { setBaked(b); setScene(s); })
       .catch((e: unknown) => setLoadErr(e instanceof Error ? e.message : String(e)));
   }, [q.sceneId]);
 
@@ -171,6 +174,7 @@ export function App() {
       <ChalkPlayer
         key={`${scene.id}-${runId}`}
         scene={scene}
+        baked={q.sceneId ? baked : null}
         allowSkip
         seekStep={q.step ?? undefined}
         pointer={q.cursor}

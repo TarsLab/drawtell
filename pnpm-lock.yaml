@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      excalidraw-animate:
-        specifier: 0.7.2
-        version: 0.7.2(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
@@ -864,9 +861,6 @@ packages:
     resolution: {integrity: sha512-VHErXfzR/6r/+yyzPKeBvO0lgjfC5cbDCQWjWwMZWSb6YU39TGIl51OUmCfWCq4ylMdJSB8zkz2vIuIeIxXApA==}
     engines: {node: '>=0.10.0'}
 
-  excalidraw-animate@0.7.2:
-    resolution: {integrity: sha512-HvMX8TIG5SILZwm1F8fcK60f8oUxC8d9dyHnTwe1eaIWr9ILYOf/qzq7jI6fVjUedgXBxzRIfnfDvdIBP6VY+g==}
-
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -1124,9 +1118,6 @@ packages:
 
   pako@2.0.3:
     resolution: {integrity: sha512-WjR1hOeg+kki3ZIOjaf4b5WVcay1jaliKSYiEaB1XzwhMQZJxRdQRv0V31EKBYlxb4T7SK3hjfc/jxyU64BoSw==}
-
-  pako@2.1.0:
-    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
 
   path-data-parser@0.1.0:
     resolution: {integrity: sha512-NOnmBpt5Y2RWbuv0LMzsayp3lVylAHLPUTut412ZA3l+C4uw4ZVkQbjShYCQ8TCpUMdPapr4YjUqLYD6v68j+w==}
@@ -2286,17 +2277,6 @@ snapshots:
 
   es6-promise-pool@2.5.0: {}
 
-  excalidraw-animate@0.7.2(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
-    dependencies:
-      '@excalidraw/excalidraw': 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      pako: 2.1.0
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - immer
-      - react
-      - react-dom
-
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
@@ -2494,8 +2474,6 @@ snapshots:
   package-manager-detector@1.8.0: {}
 
   pako@2.0.3: {}
-
-  pako@2.1.0: {}
 
   path-data-parser@0.1.0: {}
 
