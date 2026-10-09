@@ -114,6 +114,15 @@ bundle without a browser:
   labelled elements, text and piles of shapes inside a child's circle at that moment; `describeCircle` says it in
   one Chinese sentence (「圈住了:散的 3 根小棒;文字『3』」).
 
+- **Reading a bundle** — `parseBundle(sceneJson, manifestJson)` → `{ scene, bounds, picture }`: the one way to put a
+  bundle back together and validate it (zod), shared by the player page, the CLI and applications. Fetching the two
+  files is the caller's job; `picture` (groups, blocks, bounds) goes straight into `circleHits`. Throws `BundleError`
+  saying what is wrong. `assembleBundle` does the same without validating, for bundles a server already checked — import only
+  it and zod is tree-shaken out of a browser bundle.
+- **Handing a scene to excalidraw** — `prepareSkeletons(skeletons)` gives elements without a `seed` a stable one
+  derived from the id and eraser strokes their paper colour and zero roughness. `bake` uses it; an application that
+  puts a bundle into the excalidraw editor (e.g. as a locked base layer) should too, or erasers show up as dark lines.
+
 - **Baked pictures** — `drawtell bake` runs excalidraw once, in a browser, after build: the static export (the very
   same picture the old player drew), every path's length, the pointer's track and the embedded font subset go into
   `bake.json`. `renderFrameSvg(baked, frameAt(clock, ms))` turns any moment into a plain SVG string (thumbnails on a

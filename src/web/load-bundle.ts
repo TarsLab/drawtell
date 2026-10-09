@@ -1,10 +1,10 @@
 /**
  * 课包 → 场景:播放页从 /bundles/<id>/ 取回 build 产物,拼回 ChalkScene。
- * 进播放器前过一遍 zod——课包可能是旧版本或被手改过,错误要能说清楚。
+ * 拼法与 zod 校验在 core 的 parseBundle(应用也用它)。
  */
 
 import type { ChalkScene } from '../player';
-import { sceneSchema } from '../schema/scene';
+import { parseBundle } from '../core/bundle';
 import { bakeMatches, type BakedLesson } from '../core/bake';
 
 async function fetchJson(url: string): Promise<Record<string, unknown>> {
@@ -20,29 +20,11 @@ export async function loadBundle(id: string): Promise<ChalkScene> {
     fetchJson(`/bundles/${id}/scene.json`),
     fetchJson(`/bundles/${id}/manifest.json`),
   ]);
-  const raw = {
-    id: sceneJson.id,
-    title: sceneJson.title,
-    problem: sceneJson.problem,
-    model: sceneJson.model,
-    template: sceneJson.template,
-    ...(sceneJson.subject != null ? { subject: sceneJson.subject } : {}),
-    ...(sceneJson.background != null ? { background: sceneJson.background } : {}),
-    skeletons: sceneJson.skeletons,
-    ...(sceneJson.groups != null ? { groups: sceneJson.groups } : {}),
-    steps: manifest.steps,
-    ...(manifest.blocks != null ? { blocks: manifest.blocks } : {}),
-    ...(manifest.subscenes != null ? { subscenes: manifest.subscenes } : {}),
-  };
-  const parsed = sceneSchema.safeParse(raw);
-  if (!parsed.success) {
-    const first = parsed.error.issues
-      .slice(0, 3)
-      .map((i) => `${i.path.join('.')}:${i.message}`)
-      .join(';');
-    throw new Error(`课包 ${id} 不符合场景契约:${first}`);
+  try {
+    return parseBundle(sceneJson, manifest).scene;
+  } catch (e) {
+    throw new Error(`课包 ${id} ${(e as Error).message}`);
   }
-  return parsed.data;
 }
 
 /** 课包烤好的画面:bake.json 在、和 scene.json 的画面对得上才给;没有就 null(播放器现烤) */
