@@ -162,10 +162,12 @@ export const ChalkPlayer = forwardRef<ChalkPlayerHandle, ChalkPlayerProps>(funct
       const timed = stretch ? scene.steps : scene.steps.map(({ audioDurationMs: _d, ...s }) => s);
       const clock = lessonClock(scene.skeletons, timed, { durations: probed, maxStretch });
       const picture = baked ?? (await (await import('./bake.ts')).bakeSkeletons(scene.skeletons, { background: scene.background }));
-      const bgHref = picture.background ? `${audioBaseUrl ?? ''}${picture.background.src}` : undefined;
-      if (bgHref) await preloadImage(bgHref);
+      // 背景图(每块画板一张)相对课包目录;先都装好,换画板时不闪
+      const assetHref = (src: string): string => `${audioBaseUrl ?? ''}${src}`;
+      const bgs = (picture.boards ?? [picture]).map((b) => b.background).filter((b): b is NonNullable<typeof b> => !!b);
+      await Promise.all(bgs.map((b) => preloadImage(assetHref(b.src))));
       if (cancelled || !stageRef.current) return;
-      const mounted = mountBaked(picture, { backgroundHref: bgHref, pointer, pointerImg });
+      const mounted = mountBaked(picture, { assetHref, pointer, pointerImg });
       const svg = mounted.svg;
       clockRef.current = clock;
       mountedRef.current = mounted;

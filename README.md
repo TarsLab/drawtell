@@ -119,6 +119,11 @@ bundle without a browser:
   files is the caller's job; `picture` (groups, blocks, bounds) goes straight into `circleHits`. Throws `BundleError`
   saying what is wrong. `assembleBundle` does the same without validating, for bundles a server already checked — import only
   it and zod is tree-shaken out of a browser bundle.
+- **Actions** — `resolveActions(skeletons, background)`: which action erases what, which board every element is on;
+  the clock records when each element is erased (`elements.get(id).erased`), `frameAt` gives the current `board` and
+  a `fade` for elements being erased and leaves erased ones out. Renderers derive the same from a frame's progress
+  (`actionState`, `boardOf`), so `paint(frame)` and `renderFrameSvg` switch viewports and backgrounds by themselves
+  (`assetHref` resolves every board's background; `onBoard` tells an app the viewport changed).
 - **Handing a scene to excalidraw** — `prepareSkeletons(skeletons)` gives elements without a `seed` a stable one
   derived from the id and eraser strokes their paper colour and zero roughness. `bake` uses it; an application that
   puts a bundle into the excalidraw editor (e.g. as a locked base layer) should too, or erasers show up as dark lines.
@@ -151,6 +156,14 @@ v2 additions, all consumed here:
 - **`background`** — an optional image under the strokes (`{ src, width, height }`, e.g. a photo of
   the problem). The board becomes the image: scene coordinates are image pixels, `build` copies the
   file into the bundle as `background.<ext>`, and the player resolves it against `audioBaseUrl`.
+- **Erasing and changing boards** — two *actions* can sit in `skeletons` between strokes; like a stroke they take
+  time (`animateDuration`), are covered by steps and stretch with the narration, but draw nothing:
+  `{ type: 'erase', id, targets: [ids] }` wipes earlier elements (the eraser sweeps over them while they fade; once
+  done they are off the board for playback, snaps and `circleHits`), and `{ type: 'board', id, background? }` wipes
+  the whole board, background included, and continues on a fresh one with its own viewport (an image's rectangle, or
+  the bounds of what is drawn on it) — read the problem on a photo, then work it out on a whiteboard in its own
+  coordinates, in one scene. `finalBoard(skeletons, background)` (core) gives what is left at the end, for an editor's
+  base layer. Partial erasing still uses a paper-coloured `customData.tool: 'eraser'` stroke.
 - **Transport** — music-player controls: pause / resume / previous / next segment
   (segment = step). Drive it via a ref (`ChalkPlayerHandle`) or the built-in bar
   (`controls` prop). Jumps always redraw a segment from its start; `prev` in a gap

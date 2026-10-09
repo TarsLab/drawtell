@@ -5,7 +5,7 @@
  */
 export { ChalkPlayer } from './ChalkPlayer.tsx';
 export type { ChalkPlayerProps, ChalkPlayerHandle } from './ChalkPlayer.tsx';
-export type { ChalkScene, ChalkSkeleton, ChalkStep, ChalkPhase, ChalkLayer, ChalkBlock, ChalkSubscene, ChalkBackground } from './types.ts';
+export type { ChalkScene, ChalkSkeleton, ChalkErase, ChalkBoard, ChalkStep, ChalkPhase, ChalkLayer, ChalkBlock, ChalkSubscene, ChalkBackground } from './types.ts';
 export { blockBounds, allBlockBounds } from './blocks.ts';
 export type { BlockBounds } from './blocks.ts';
 export { computeStepWindows, durationOf, freezeTimeSec, FREEZE_EPS_MS, START_MS, stretchToAudio } from './timeline.ts';
